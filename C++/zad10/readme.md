@@ -1,0 +1,1 @@
+Prawdopodobnie jest częściowo źle.
