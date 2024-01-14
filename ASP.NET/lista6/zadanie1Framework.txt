@@ -1,0 +1,202 @@
+### Zadanie 1
+Powtórzyć przedstawiony na wykładzie przykład własnego routera dla ścieżek typu CMS w obu wariantach, .NET.Framework i .NET.Core (każdy za 1 punkt)
+
+#### App_Start/RouteConfig.cs
+```csharp=
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+
+namespace Zadanie1framework
+{
+    public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+
+            // routy postaci CMS/site/subsite/page
+            routes.Add(
+                "customroute",
+                new CMSCustomRoute(
+                    new RouteValueDictionary(new
+                    {
+                        controller = "Page",
+                        action = "Render"
+                    }),
+                new MvcRouteHandler())
+            );
+
+            // domyślny routing MVC
+            routes.MapRoute(
+                name: "Default",
+                url: "{controller}/{action}/{id}",
+                defaults: new
+                {
+                    controller = "Home",
+                    action = "Index",
+                    id = UrlParameter.Optional
+                }
+            );
+        }
+
+    }
+
+    public class CMSCustomRoute : Route
+    {
+        public const string DEFAULTPAGEEXTENSION = ".html";
+        public const string CMS = "CMS";
+        public const string SITENAME = "siteName";
+        public const string PAGENAME = "pageName";
+
+        public CMSCustomRoute(
+            RouteValueDictionary defaults,
+            IRouteHandler routeHandler)
+            : base(string.Empty, defaults, routeHandler) { }
+
+        /// <summary>
+        /// Metoda która dostaje Url i ma zwrócić segmenty routy
+        /// </summary>
+        public override RouteData GetRouteData(HttpContextBase httpContext)
+        {
+            RouteData routeData = new RouteData(this, this.RouteHandler);
+            string virtualPath = httpContext.Request.AppRelativeCurrentExecutionFilePath.Substring(2) + (httpContext.Request.PathInfo ?? string.Empty);
+            string[] segments = virtualPath.ToLower().Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length >= 1 && string.Equals(segments.First(), CMS, StringComparison.InvariantCultureIgnoreCase))
+            {
+                if (segments.Last().IndexOf(DEFAULTPAGEEXTENSION) > 0)
+                {
+                    routeData.Values[SITENAME] = string.Join("/", segments.Skip(1).Take(segments.Length - 2).ToArray());
+                    routeData.Values[PAGENAME] = segments.Last().Substring(0, segments.Last().IndexOf("."));
+                }
+                else if (segments.Last().IndexOf(".") < 0)
+                {
+                    routeData.Values[SITENAME] = string.Join("/", segments.Skip(1).ToArray());
+                    routeData.Values[PAGENAME] = "index.html";
+                }
+                else
+                {
+                    return null;
+                }
+                // add remaining default values
+                foreach (KeyValuePair<string, object> def in this.Defaults)
+                {
+                    if (!routeData.Values.ContainsKey(def.Key))
+                    {
+                        routeData.Values.Add(def.Key, def.Value);
+                    }
+                }
+                return routeData;
+            }
+            else
+                return null;
+        }
+        /// <summary>
+        /// Metoda która dostaje segmenty routy a ma zwrócić URL
+        /// </summary>
+        /// <remarks>
+        /// Wykorzystuje ją np. UrlHelper
+        /// </remarks>
+        public override VirtualPathData GetVirtualPath(
+            RequestContext requestContext,
+            RouteValueDictionary values)
+        {
+            List<string> baseSegments = new List<string>();
+            List<string> queryString = new List<string>();
+            if (values[SITENAME] is string sitename)
+                baseSegments.Add(sitename);
+            if (values[PAGENAME] is string pageName)
+            {
+                if (!string.IsNullOrEmpty(pageName) && !pageName.EndsWith(DEFAULTPAGEEXTENSION))
+                    pageName += DEFAULTPAGEEXTENSION;
+                baseSegments.Add(pageName);
+            }
+            string uri = string.Join("/", baseSegments.Where(s => !string.IsNullOrEmpty(s)));
+            return new VirtualPathData(this, uri);
+        }
+    }
+}
+```
+
+#### Controllers/HomeController.cs
+```csharp=
+using System.Web.Mvc;
+
+namespace Zadanie1framework.Controllers
+{
+    public class HomeController : Controller
+    {
+        public ActionResult Index()
+        {
+            return View();
+        }
+    }
+} 
+```
+    
+#### Controllers/PageController.cs
+```csharp=
+using Zadanie1framework.Models;
+using System.Web.Mvc;
+
+namespace Zadanie1framework.Controllers
+{
+    public class PageController : Controller
+    {
+        // GET: Page
+        public ActionResult Render()
+        {
+            var routeData = this.Request.RequestContext.RouteData.Values;
+            string site = routeData[CMSCustomRoute.SITENAME] as string;
+            string page = routeData[CMSCustomRoute.PAGENAME] as string;
+
+            // odczyt z magazynu danych
+            // renderowanie
+            var model = new PageRenderModel()
+            {
+                Site = site,
+                Page = page
+            };
+            return View(model);
+        }
+
+    }
+}
+```
+
+#### Models/PageRenderModel.cs
+```csharp=
+namespace Zadanie1framework.Models
+{
+    public class PageRenderModel
+    {
+        public string Site { get; set; }
+        public string Page { get; set; }
+    }
+} 
+```
+
+#### Views/Home/Index.cshtml
+```cshtml=
+@{
+    ViewBag.Title = "Index";
+}
+
+<div>Strona główna. CMS znajduje się w /CMS/any_sitename</div> 
+```
+    
+#### Views/Page/Render.cshtml
+```cshtml=
+@model Zadanie1framework.Models.PageRenderModel
+@{
+    ViewBag.Title = "View";
+}
+
+<h2>CMS Render</h2>
+
+site: @Model.Site <br />
+page: @Model.Page
+```
