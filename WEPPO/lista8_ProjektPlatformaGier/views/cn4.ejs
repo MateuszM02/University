@@ -1,0 +1,108 @@
+<!-- views/cn4.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Connect 4 game</title>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <script src="/socket.io/socket.io.js"></script>
+<script>
+        var socket = io();
+        var roomid = '<%= room.room_ID %>';
+        var userid = '<%= userid %>';
+        var plansza = [['a1','a2','a3','a4','a5','a6','a7'],['b1','b2','b3','b4','b5','b6','b7'],['c1','c2','c3','c4','c5','c6','c7'],['d1','d2','d3','d4','d5','d6','d7'],['e1','e2','e3','e4','e5','e6','e7'],['f1','f2','f3','f4','f5','f6','f7']];
+    window.addEventListener('load', function() {
+
+
+        let g1 = '<%= room.ID_first %>';
+        let g2 = '<%= room.ID_second %>';
+        console.log("user id = "+ userid);
+        console.log("g1 = "+g1);
+        console.log("g2 = "+g2);
+        socket.emit('join room',roomid);
+        socket.on('board', function(data) {
+
+            for(let i=0; i<7;i++){
+                for(let j=0; j<7;j++){
+                    let pomi = document.getElementById(plansza[i][j]);
+                    console.log(data[i][j]);
+                    if(data[i][j]=="X"){
+                        console.log("x");
+                        pomi.innerHTML = "X";
+                        pomi.style.color = 'yellow';
+                    }
+                    else if(data[i][j]=="O"){
+                        console.log("o");
+                        pomi.innerHTML = "O";
+                        pomi.style.color = 'red';
+                    }
+                }
+            }
+        });
+
+    });
+
+    function MakeMove(button,napis){
+            console.log("wywolano od "+napis);
+            socket.emit('chat-message',napis,roomid,userid)
+        }
+
+</script>
+</head>
+    <body>
+        <!-- Grafika strony -->
+    <header>Connect 4</header>
+    <text>nazwa gracza: <%= username %></text>
+    <div class="cn4Grid">
+        <button id="a1" , onclick="MakeMove(this,0)"></button>
+        <button id="a2" , onclick="MakeMove(this,1)"></button>
+        <button id="a3" , onclick="MakeMove(this,2)"></button>
+        <button id="a4" , onclick="MakeMove(this,3)"></button>
+        <button id="a5" , onclick="MakeMove(this,4)"></button>
+        <button id="a6" , onclick="MakeMove(this,5)"></button>
+        <button id="a7" , onclick="MakeMove(this,6)"></button>
+
+        <button id="b1" , onclick="MakeMove(this,0)"></button>
+        <button id="b2" , onclick="MakeMove(this,1)"></button>
+        <button id="b3" , onclick="MakeMove(this,2)"></button>
+        <button id="b4" , onclick="MakeMove(this,3)"></button>
+        <button id="b5" , onclick="MakeMove(this,4)"></button>
+        <button id="b6" , onclick="MakeMove(this,5)"></button>
+        <button id="b7" , onclick="MakeMove(this,6)"></button>
+
+        <button id="c1" , onclick="MakeMove(this,0)"></button>
+        <button id="c2" , onclick="MakeMove(this,1)"></button>
+        <button id="c3" , onclick="MakeMove(this,2)"></button>
+        <button id="c4" , onclick="MakeMove(this,3)"></button>
+        <button id="c5" , onclick="MakeMove(this,4)"></button>
+        <button id="c6" , onclick="MakeMove(this,5)"></button>
+        <button id="c7" , onclick="MakeMove(this,6)"></button>
+
+        <button id="d1" , onclick="MakeMove(this,0)"></button>
+        <button id="d2" , onclick="MakeMove(this,1)"></button>
+        <button id="d3" , onclick="MakeMove(this,2)"></button>
+        <button id="d4" , onclick="MakeMove(this,3)"></button>
+        <button id="d5" , onclick="MakeMove(this,4)"></button>
+        <button id="d6" , onclick="MakeMove(this,5)"></button>
+        <button id="d7" , onclick="MakeMove(this,6)"></button>
+
+        <button id="e1" , onclick="MakeMove(this,0)"></button>
+        <button id="e2" , onclick="MakeMove(this,1)"></button>
+        <button id="e3" , onclick="MakeMove(this,2)"></button>
+        <button id="e4" , onclick="MakeMove(this,3)"></button>
+        <button id="e5" , onclick="MakeMove(this,4)"></button>
+        <button id="e6" , onclick="MakeMove(this,5)"></button>
+        <button id="e7" , onclick="MakeMove(this,6)"></button>
+
+        <button id="f1" , onclick="MakeMove(this,0)"></button>
+        <button id="f2" , onclick="MakeMove(this,1)"></button>
+        <button id="f3" , onclick="MakeMove(this,2)"></button>
+        <button id="f4" , onclick="MakeMove(this,3)"></button>
+        <button id="f5" , onclick="MakeMove(this,4)"></button>
+        <button id="f6" , onclick="MakeMove(this,5)"></button>
+        <button id="f7" , onclick="MakeMove(this,6)"></button>
+    </div>
+    </body>
+</html>
