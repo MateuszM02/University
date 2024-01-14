@@ -1,0 +1,40 @@
+<!-- views/rooms_n.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Platforma gier</title>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+
+<body class="intro">
+    <% if (room) { %>
+         <text>
+            Nazwa pokoju: <%= room.name %>
+        </text>
+        <text>
+            ID pokoju: <%= room.room_ID %>
+        </text>
+        <% } %>
+            <form method="POST">
+                <% if (room) { %>
+                <text>Wybierz grę:</text>
+                <select name="games" id="games">
+                    <% for (e of games) { %>
+                        <option name="game" value=<%= e.short %>>
+                            <%= e.name %>
+                        </option>
+                        <% } %>
+                </select>
+                <button class="openedRoomsButton"> Zagraj </button>
+            <% } %>
+        </form>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            var socket = io();
+        </script>
+    </body>
+</html>

@@ -1,0 +1,132 @@
+<!-- views/rvs.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Reversi game</title>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <script src="/socket.io/socket.io.js"></script>
+<script>
+        var socket = io();
+        var roomid = '<%= room.room_ID %>';
+        var userid = '<%= userid %>';
+        var plansza = [['a1','a2','a3','a4','a5','a6','a7','a8'],['b1','b2','b3','b4','b5','b6','b7','b8'],['c1','c2','c3','c4','c5','c6','c7','c8'],['d1','d2','d3','d4','d5','d6','d7','d8'],['e1','e2','e3','e4','e5','e6','e7','e8'],['f1','f2','f3','f4','f5','f6','f7','f8'],['g1','g2','g3','g4','g5','g6','g7','g8'],['h1','h2','h3','h4','h5','h6','h7','h8']];
+    window.addEventListener('load', function() {
+
+
+        let g1 = '<%= room.ID_first %>';
+        let g2 = '<%= room.ID_second %>';
+        console.log("user id = "+ userid);
+        console.log("g1 = "+g1);
+        console.log("g2 = "+g2);
+        socket.emit('join room',roomid);
+        socket.on('board', function(data) {
+
+            for(let i=0; i<8;i++){
+                for(let j=0; j<8;j++){
+                    let pomi = document.getElementById(plansza[i][j]);
+                    console.log(data[i][j]);
+                    if(data[i][j]=="X"){
+                        console.log("x");
+                        pomi.innerHTML = "O";
+                        pomi.style.color = 'black';
+                    }
+                    else if(data[i][j]=="O"){
+                        console.log("o");
+                        pomi.innerHTML = "O";
+                        pomi.style.color = 'white';
+                    }
+                }
+            }
+        });
+
+
+
+    });
+    function MakeMove(button,napis){
+            console.log("wywolano od "+napis);
+            socket.emit('chat-message',napis,roomid,userid)
+        }
+
+</script>
+</head>
+    <body>
+        <header>Reversi</header>
+        <text>nazwa gracza: <%= username %></text>
+    <div class="rvsGrid">
+        <button id="a1" , onclick="MakeMove(this,'a1')"></button>
+        <button id="a2" , onclick="MakeMove(this,'a2')"></button>
+        <button id="a3" , onclick="MakeMove(this,'a3')"></button>
+        <button id="a4" , onclick="MakeMove(this,'a4')"></button>
+        <button id="a5" , onclick="MakeMove(this,'a5')"></button>
+        <button id="a6" , onclick="MakeMove(this,'a6')"></button>
+        <button id="a7" , onclick="MakeMove(this,'a7')"></button>
+        <button id="a8" , onclick="MakeMove(this,'a8')"></button>
+
+        <button id="b1" , onclick="MakeMove(this,'b1')"></button>
+        <button id="b2" , onclick="MakeMove(this,'b2')"></button>
+        <button id="b3" , onclick="MakeMove(this,'b3')"></button>
+        <button id="b4" , onclick="MakeMove(this,'b4')"></button>
+        <button id="b5" , onclick="MakeMove(this,'b5')"></button>
+        <button id="b6" , onclick="MakeMove(this,'b6')"></button>
+        <button id="b7" , onclick="MakeMove(this,'b7')"></button>
+        <button id="b8" , onclick="MakeMove(this,'b8')"></button>
+
+        <button id="c1" , onclick="MakeMove(this,'c1')"></button>
+        <button id="c2" , onclick="MakeMove(this,'c2')"></button>
+        <button id="c3" , onclick="MakeMove(this,'c3')"></button>
+        <button id="c4" , onclick="MakeMove(this,'c4')"></button>
+        <button id="c5" , onclick="MakeMove(this,'c5')"></button>
+        <button id="c6" , onclick="MakeMove(this,'c6')"></button>
+        <button id="c7" , onclick="MakeMove(this,'c7')"></button>
+        <button id="c8" , onclick="MakeMove(this,'c8')"></button>
+
+        <button id="d1" , onclick="MakeMove(this,'d1')"></button>
+        <button id="d2" , onclick="MakeMove(this,'d2')"></button>
+        <button id="d3" , onclick="MakeMove(this,'d3')"></button>
+        <button id="d4" , onclick="MakeMove(this,'d4')", style="color: white">O</button>
+        <button id="d5" , onclick="MakeMove(this,'d5')">O</button>
+        <button id="d6" , onclick="MakeMove(this,'d6')"></button>
+        <button id="d7" , onclick="MakeMove(this,'d7')"></button>
+        <button id="d8" , onclick="MakeMove(this,'d8')"></button>
+
+        <button id="e1" , onclick="MakeMove(this,'e1')"></button>
+        <button id="e2" , onclick="MakeMove(this,'e2')"></button>
+        <button id="e3" , onclick="MakeMove(this,'e3')"></button>
+        <button id="e4" , onclick="MakeMove(this,'e4')">O</button>
+        <button id="e5" , onclick="MakeMove(this,'e5')", style="color: white">O</button>
+        <button id="e6" , onclick="MakeMove(this,'e6')"></button>
+        <button id="e7" , onclick="MakeMove(this,'e7')"></button>
+        <button id="e8" , onclick="MakeMove(this,'e8')"></button>
+
+        <button id="f1" , onclick="MakeMove(this,'f1')"></button>
+        <button id="f2" , onclick="MakeMove(this,'f2')"></button>
+        <button id="f3" , onclick="MakeMove(this,'f3')"></button>
+        <button id="f4" , onclick="MakeMove(this,'f4')"></button>
+        <button id="f5" , onclick="MakeMove(this,'f5')"></button>
+        <button id="f6" , onclick="MakeMove(this,'f6')"></button>
+        <button id="f7" , onclick="MakeMove(this,'f7')"></button>
+        <button id="f8" , onclick="MakeMove(this,'f8')"></button>
+
+        <button id="g1" , onclick="MakeMove(this,'g1')"></button>
+        <button id="g2" , onclick="MakeMove(this,'g2')"></button>
+        <button id="g3" , onclick="MakeMove(this,'g3')"></button>
+        <button id="g4" , onclick="MakeMove(this,'g4')"></button>
+        <button id="g5" , onclick="MakeMove(this,'g5')"></button>
+        <button id="g6" , onclick="MakeMove(this,'g6')"></button>
+        <button id="g7" , onclick="MakeMove(this,'g7')"></button>
+        <button id="g8" , onclick="MakeMove(this,'g8')"></button>
+
+        <button id="h1" , onclick="MakeMove(this,'h1')"></button>
+        <button id="h2" , onclick="MakeMove(this,'h2')"></button>
+        <button id="h3" , onclick="MakeMove(this,'h3')"></button>
+        <button id="h4" , onclick="MakeMove(this,'h4')"></button>
+        <button id="h5" , onclick="MakeMove(this,'h5')"></button>
+        <button id="h6" , onclick="MakeMove(this,'h6')"></button>
+        <button id="h7" , onclick="MakeMove(this,'h7')"></button>
+        <button id="h8" , onclick="MakeMove(this,'h8')"></button>
+    </div>
+    </body>
+</html>

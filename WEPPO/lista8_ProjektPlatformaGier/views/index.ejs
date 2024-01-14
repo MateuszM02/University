@@ -1,0 +1,39 @@
+<!-- views/index.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+<title>Platforma gier</title>
+<link rel="stylesheet" type="text/css" href="styles.css">
+<script src="/socket.io/socket.io.js"></script>
+<script>
+     var socket = io();
+</script>
+</head>
+    <body class="intro">
+        <form method="POST" name="changeusername">
+        <text>
+            Podaj nick: <input type="text" name='imie' value='<%= imie%>'/>
+        </text>
+        </form>
+        <form method="POST" name="join room">
+            <text>
+                Nowy Pokój: <input type='text' name='newroom' id='btnr' value='<%= newroom%>' />
+            </text></br>
+
+            <text>
+                Liczba otwartych pokoi: <%= roomnumber %>
+            </text></br>
+            <% for (e of roomslist)
+            { %>
+                <button name='existingroom' id='bter' class="openedRoomsButton" value='<%= e.room_ID %>'>
+                    <%= e.name %>
+                </button>
+            <% } %>
+
+        </form>
+
+    </body>
+</html>

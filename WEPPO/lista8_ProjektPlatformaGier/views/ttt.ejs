@@ -1,0 +1,66 @@
+<!-- views/ttt.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+<title>Tic Tac Toe game</title>
+<link rel="stylesheet" type="text/css" href="styles.css">
+<script src="/socket.io/socket.io.js"></script>
+<script>
+        var socket = io();
+        var roomid = '<%= room.room_ID %>';
+        var userid = '<%= userid %>';
+        var plansza = [['a1','a2','a3'],['b1','b2','b3'],['c1','c2','c3']];
+    window.addEventListener('load', function() {
+
+
+        socket.emit('join room',roomid);
+        socket.on('board', function(data) {
+
+            for(let i=0; i<=2;i++){
+                for(let j=0; j<=2;j++){
+                    let pomi = document.getElementById(plansza[i][j]);
+                    console.log(data[i][j]);
+                    if(data[i][j]=="X"){
+                        console.log("x");
+                        pomi.innerHTML = "X";
+                    }
+                    else if(data[i][j]=="O"){
+                        console.log("o");
+                        pomi.innerHTML = "O";
+                        pomi.style.color = 'red';
+                    }
+                }
+            }
+        });
+
+
+
+    });
+    function MakeMove(button,napis){
+            console.log("wywolano od "+napis);
+            socket.emit('chat-message',napis,roomid,userid)
+        }
+
+</script>
+<title>Document</title>
+</head>
+    <body>
+        <header>Tic Tac Toe</header>
+        <text>nazwa gracza: <%= username %></text>
+        <div class="tttGrid">
+            <button id="a1" , onclick="MakeMove(this,'a1')"></button>
+            <button id="a2" , onclick="MakeMove(this,'a2')"></button>
+            <button id="a3" , onclick="MakeMove(this,'a3')"></button>
+            <button id="b1" , onclick="MakeMove(this,'b1')"></button>
+            <button id="b2" , onclick="MakeMove(this,'b2')"></button>
+            <button id="b3" , onclick="MakeMove(this,'b3')"></button>
+            <button id="c1" , onclick="MakeMove(this,'c1')"></button>
+            <button id="c2" , onclick="MakeMove(this,'c2')"></button>
+            <button id="c3" , onclick="MakeMove(this,'c3')"></button>
+        </div>
+
+    </body>
+</html>
