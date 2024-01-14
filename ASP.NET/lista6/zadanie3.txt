@@ -1,0 +1,225 @@
+### Zadanie 3
+Zademonstrować działanie następujących mechanizmów przedstawionych na wykładzie:
+- wskazanie strony layoutowej, dynamiczne wskazanie strony layoutowej (na podstawie
+jakiegoś warunku w kodzie)
+- mechanizm widoków częściowych (partial views)
+- mechanizm sekcji (z renderowaniem warunkowym)
+
+#### Controllers/LayoutController.cs
+```csharp=
+using Microsoft.AspNetCore.Mvc;
+
+namespace Zadanie3.Controllers
+{
+    public class LayoutController : Controller
+    {
+
+        public IActionResult Index(string? id)
+        {
+            if (UseSpecialLayout(id))
+                return View("IndexSpecial");
+            else
+                return View();
+        }
+
+        private static bool UseSpecialLayout(string? id = null)
+        {
+            return !string.IsNullOrEmpty(id);
+        }
+
+        public IActionResult IndexSpecialLayout()
+        {
+            return View();
+        }
+    }
+}
+```
+
+#### Controllers/PartialController.cs
+```csharp=
+using Microsoft.AspNetCore.Mvc;
+using Zadanie3.Models;
+
+namespace Zadanie3.Controllers
+{
+    public class PartialController : Controller
+    {
+        public IActionResult Index()
+        {
+            // Przykładowe dane modelu
+            var model = new PartialViewModel
+            {
+                FirstName = "Jan",
+                LastName = "Kowalski"
+            };
+
+            return View(model);
+        }
+    }
+}
+```
+
+#### Controllers/SectionController.cs
+```csharp=
+using Microsoft.AspNetCore.Mvc;
+
+namespace Zadanie3.Models
+{
+    public class SectionController : Controller
+    {
+        public IActionResult Index(string? id)
+        {
+            // Przykładowe dane modelu
+            var model = new SectionViewModel
+            {
+                ShowSection = ShowSection(id)
+            };
+
+            return View(model);
+        }
+
+        private static bool ShowSection(string? id = null)
+        {
+            return !string.IsNullOrEmpty(id);
+        }
+    }
+}
+```
+
+#### Models/PartialViewModel.cs
+```csharp=
+namespace Zadanie3.Models
+{
+    public class PartialViewModel
+    {
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+    }
+}
+```
+
+#### Models/SectionViewModel.cs
+```csharp=
+namespace Zadanie3.Models
+{
+    public class SectionViewModel
+    {
+        public bool ShowSection { get; set; }
+    }
+}
+```
+
+#### Views/Layout
+```cshtml=
+//Index.cshtml
+@{
+    Layout = "_Layout";
+}
+
+<h2>Widok Główny "Layout"</h2>
+
+//IndexSpecial.cshtml
+@{
+    Layout = "_Layout";
+}
+
+<h2>To jest specjalny layout dostępny pod adresem Layout/Index/any_id.</h2>
+```
+
+#### Views/Partial/Index.cshtml
+```cshtml=
+@model Zadanie3.Models.PartialViewModel
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>Widok Główny "Partial"</h2>
+
+<!-- Użycie widoku częściowego -->
+@Html.Partial("_PartialView", Model)
+```
+
+#### Views/Section/Index.cshtml
+```cshtml=
+@model Zadanie3.Models.SectionViewModel
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Widok Główny "Section"</h2>
+
+@if (Model.ShowSection)
+{
+    <!-- Definicja sekcji opcjonalnej -->
+    @section OptionalSection
+    {
+    <p>To jest opcjonalna sekcja dostępna pod adresem Section/Index/any_id.</p>
+    }
+}
+```
+
+#### Shared/_Layout.cshtml
+```cshtml=
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title</title>
+</head>
+<body>
+
+    <!-- Renderowanie treści głównej widoku -->
+    @RenderBody()
+
+    <!-- Renderowanie sekcji opcjonalnej -->
+    @RenderSection("OptionalSection", required: false)
+
+</body>
+</html>
+```
+
+#### Shared/_PartialView.cshtml
+```cshtml=
+@model Zadanie3.Models.PartialViewModel
+
+<div>Imię: @Model.FirstName</div>
+<div>Nazwisko: @Model.LastName</div>
+```
+
+#### Shared/_PartialViewSection.cshtml
+```cshtml=
+@model Zadanie3.Models.SectionViewModel
+
+@section OptionalSection 
+{
+    <p>To jest opcjonalna sekcja _PartialViewSection.</p>
+}
+```
+
+#### Program.cs
+```csharp=
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+var controller = "Layout";
+//var controller = "Partial";
+//var controller = "Section";
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller="+controller+"}/{action=Index}/{id?}");
+
+app.Run();
+```
