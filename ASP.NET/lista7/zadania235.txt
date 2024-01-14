@@ -1,0 +1,1158 @@
+### Zadania 2, 3 i 5
+Naucz się korzystać z mechanizmu autentykacji opartego o ciastko autentykacji. Wykorzystaj moduł Forms dla .NET.Framework.
+    
+#### App_Data 
+Dodajemy Bazę Danych (u mnie UserDatabase.mdf):
+Add New Item -> C# -> Data -> SQL Server Database
+
+A do bazy 4 tabele - USERS, PASSWORDS, ROLES, USERSROLES:
+```sql=
+CREATE TABLE [dbo].[USERS] (
+    [Name]  VARCHAR (30) NOT NULL,
+    [Email] VARCHAR (30) NOT NULL,
+    PRIMARY KEY CLUSTERED ([Name] ASC)
+);
+```    
+```sql=
+CREATE TABLE [dbo].[PASSWORDS] (
+    [Username]   VARCHAR (30) NOT NULL,
+    [hashWord]   VARCHAR (64) NOT NULL,
+    [salt]       VARCHAR (64) NULL,
+    [iterations] INT           NOT NULL,
+    [OtpKey]     VARBINARY (64) NULL, -- nowe do zadania 5
+    PRIMARY KEY CLUSTERED ([Username] ASC)
+);
+```
+```sql=
+CREATE TABLE [dbo].[ROLES] (
+    [Name] VARCHAR (30) NOT NULL,
+    PRIMARY KEY CLUSTERED ([Name] ASC)
+);
+```
+```sql=
+CREATE TABLE [dbo].[USERSROLES] (
+    [Username] VARCHAR (30) NOT NULL,
+    [Rolename] VARCHAR (30) NOT NULL,
+    PRIMARY KEY CLUSTERED ([Username] ASC, [Rolename] ASC)
+);
+```   
+
+#### Controllers/BaseController.cs
+Klasa odpowiedzialna za dostęp do SQL-owych baz w C#
+```csharp=
+using System;
+using System.Web.Mvc;
+using static Zadanie2.MvcApplication;
+
+namespace Zadanie2.Controllers
+{
+    public abstract class BaseController : Controller, IDisposable
+    {
+        private AppDbContext _context; // kontekst dostepu do bazy danych
+        public static string databaseName = "UserDatabase";
+        public AppDbContext DbContext
+        {
+            get
+            {
+                if (_context == null)
+                    _context = new AppDbContext();
+                return _context;
+            }
+        }
+
+        public new void Dispose()
+        {
+            _context?.Dispose();
+        }
+    }
+} 
+```
+
+#### Controllers/CustomFilters.cs
+Do zadania 3 - autentykacja i autoryzacja
+```csharp=
+using System;
+using System.Web;
+using System.Web.Mvc.Filters;
+using System.Web.Mvc;
+using System.Web.Routing;
+using System.Web.Security;
+using System.Linq;
+using System.Collections.Generic;
+
+namespace Zadanie2.Controllers
+{
+    // filtr autentykacji - upewnia sie, ze uzytkownik jest ten sam,
+    // co w ciastku autentykacji, jesli nie, nie pozwala na dostep do strony 
+    public class CustomAuthentication : FilterAttribute, IAuthenticationFilter
+    {
+        public void OnAuthentication(AuthenticationContext filterContext)
+        {
+            try
+            {
+                HttpCookie authCookie = filterContext.HttpContext.Request.Cookies[FormsAuthentication.FormsCookieName];
+                var authTicket = FormsAuthentication.Decrypt(authCookie.Value);
+                var username = filterContext.HttpContext.User.Identity.Name;
+                if (authTicket.Name != username)
+                    filterContext.Result = new HttpUnauthorizedResult();
+            }
+            catch (Exception e)
+            {
+                filterContext.Result = new HttpUnauthorizedResult(e.Message);
+            }
+        }
+
+        public void OnAuthenticationChallenge(AuthenticationChallengeContext filterContext)
+        {
+            if (filterContext.Result == null || filterContext.Result is HttpUnauthorizedResult)
+            {
+                //Redirecting the user to the Login View of Account Controller  
+                filterContext.Result = new RedirectToRouteResult(
+                new RouteValueDictionary
+                {
+                    { "controller", "Home" },
+                    { "action", "Login" }
+                });
+            }
+        }
+    }
+
+    // filtr autoryzacji - okresla, jakie role maja dostep do danego zasobu,
+    // a nastepnie sprawdza, czy uzytkownik ma wymagana role w OnAuthorization
+    // sposob uzycia: nad metoda/klasa dajemy pole
+    // [CustomAuthorization(Roles="rola1, rola2")] - musi miec jedna z rol
+    // mozna dawac kilka pol nad jedna metoda/klasa, wtedy musi spelniac kazde z pol, np.:
+    // [CustomAuthorization(Roles="rola1")]
+    // [CustomAuthorization(Roles="rola2")]
+    // void Metoda() {}
+    // uzytkownik musi miec obie role - rola1, rola2 - jednoczesnie, aby skorzystajac z Metoda
+    public class CustomAuthorization : AuthorizeAttribute, IAuthorizationFilter
+    {
+        public override void OnAuthorization(AuthorizationContext filterContext)
+        {
+            string username = filterContext.HttpContext.User.Identity.Name;
+            var DbContext = new MvcApplication.AppDbContext();
+            
+            // zdobadz liste wszystkich roli ktore ma aktualnie zalogowany uzytkownik
+            List<string> currentRoles = DbContext.UserRoles
+                .Where(ur => ur.Username == username)
+                .Select(ur => ur.Rolename).ToList();
+            
+            // sprawdzamy, czy uzytkownik ma jakas z wymaganych roli
+            foreach (string goodRole in Roles.Split(','))
+            {
+                if (currentRoles.Contains(goodRole))
+                    return;
+            }
+            // nieautoryzowana proba wejscia - forbidden error
+            filterContext.Result = new HttpStatusCodeResult(403);
+        }
+    }
+}
+```
+    
+#### Controllers/HomeController.cs
+Jeśli zalogowany użytkownik wyłączy stronę bez wylogowania się, to przy następnym logowaniu pozostanie zalogowany (pod warunkiem, że to będzie ta sama sesja).
+```csharp=
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web.Mvc;
+using System.Web.Security;
+using Zadanie2.Models;
+
+namespace Zadanie2.Controllers
+{
+    public class HomeController : BaseController
+    {
+        public static string bestUserRole = "";
+        public static byte[] realKey; // nowe do zadania 5
+        [HttpGet]
+        public ActionResult Index()
+        {
+            // jesli nikt nie jest zalogowany, pokaz ekran logowania/rejestracji
+            if (!User.Identity.IsAuthenticated)
+                return View();
+    
+            bestUserRole = ROLE.FindBestRole(DbContext, User.Identity.Name); // update
+            return RedirectToAction(nameof(AfterLogin));
+        }
+
+        // wybrano opcje rejestracji
+        [HttpGet]
+        public ActionResult SignUp()
+        {
+            return View();
+        }
+
+        // proba rejestracji
+        [HttpPost]
+        public ActionResult SignUp(UserRegisterModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                // sprawdz, czy juz istnieje uzytkownik o takim imieniu
+                if (DbContext.Users.Any(u => u.Name == model.Username))
+                {
+                    ModelState.AddModelError("", "Użytkownik o podanym imieniu już istnieje.");
+                    return View(nameof(SignUp), model);
+                }
+                // sprawdz, czy juz istnieje uzytkownik o takim Emailu
+                else if (DbContext.Users.Any(u => u.Email == model.Email))
+                {
+                    ModelState.AddModelError("", "Uzytkownik o podanym emailu już istnieje.");
+                    return View(nameof(SignUp), model);
+                }
+
+                // stworz obiekt hasla w postaci niejawnej
+                PASSWORD password = new PASSWORD
+                {
+                    Username = model.Username,
+                };
+                password.HashWord = password.Hash(model.Password);
+
+                // stworz obiekt uzytkownika
+                USER newUser = new USER
+                {
+                    Name = model.Username,
+                    Email = model.Email
+                };
+
+                // stworz obiekt rol uzytkownika
+                USERSROLES userRole = new USERSROLES
+                {
+                    Username = model.Username,
+                    Rolename = ROLE.User
+                };
+
+                // dodaj uzytkownika, haslo i role uzytkownika do bazy danych
+                DbContext.Users.Add(newUser);
+                DbContext.Passwords.Add(password);
+                DbContext.UserRoles.Add(userRole);
+                DbContext.SaveChanges();
+
+                // dodaj ciastko autentykacji uzytkownika
+                FormsAuthentication.SetAuthCookie(newUser.Name, false);
+                bestUserRole = userRole.Rolename; // update
+                return RedirectToAction(nameof(AfterLogin));
+            }
+            return View(model);
+        }
+
+        // wybrano opcje logowania
+        [HttpGet]
+        public ActionResult Login()
+        {
+            return View();
+        }
+
+        // proba logowania
+        [HttpPost]
+        public ActionResult Login(AccountModel model)
+        {
+            var users = DbContext.Users.ToList();
+            var passwords = DbContext.Passwords.ToList();
+            if (ModelState.IsValid)
+            {
+                // uzytkownik nie istnieje
+                if (!users.Any(u => u.Name == model.Username))
+                {
+                    ModelState.AddModelError("", "Nie ma takiego użytkownika.");
+                    return View(nameof(Login), model);
+                }
+
+                USER currentUser = users.First
+                    (u => u.Name == model.Username);
+
+                PASSWORD userPassword = passwords.First
+                    (p => p.Username == model.Username);
+
+                // sprawdz, czy uzytkownik podal poprawne haslo
+                string UserRealHashWord = userPassword.HashWord;
+                string UserGivenHashWord = userPassword.Hash(model.Password);
+                bool okPassword = UserRealHashWord.Equals(UserGivenHashWord);
+
+                if (!okPassword)
+                {
+                    ModelState.AddModelError("", "Niepoprawne hasło.");
+                    return View(nameof(Login));
+                }
+
+                // dodaj ciastko autentykacji uzytkownika
+                FormsAuthentication.SetAuthCookie(model.Username, false);
+                bestUserRole = ROLE.FindBestRole(DbContext, model.Username); // update
+                return RedirectToAction(nameof(AfterLogin));
+            }
+            return View(nameof(Login));
+        }
+
+        // wylogowano sie
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult LogOut()
+        {
+            // wyloguj uzytkownika
+            FormsAuthentication.SignOut();
+            // Usuń ciasteczko z tokenem antyforgeryjnym
+            Response.Cookies["__RequestVerificationToken"].Expires
+                = DateTime.Now.AddSeconds(-1);
+            return RedirectToAction(nameof(Index));
+        }
+
+        // akcje po zalogowaniu ---------------------------------------------------------
+
+        // zalogowano/zarejestrowano
+        [HttpGet]
+        [CustomAuthentication]
+        public ActionResult AfterLogin()
+        {
+            return View();
+        }
+
+        [HttpGet]
+        [CustomAuthorization(Roles="Admin,TrustedUser")]
+        public ActionResult SeeUserList()
+        {
+            var users = DbContext.Users.ToList();
+            return View(users);
+        }
+
+        [HttpGet]
+        [CustomAuthentication]
+        public ActionResult RoleChange()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult RoleChange(List<bool> isRolePicked) // trusteduser/admin
+        {
+            string username = User.Identity.Name;
+            // usun wszystkie dotychczasowe role uzytkownika
+            List<USERSROLES> currentUserRoles = 
+                DbContext.UserRoles
+                .Where(ur => ur.Username == username)
+                .ToList();
+            DbContext.UserRoles.RemoveRange(currentUserRoles);
+            // kazdy uzytkownik ma zawsze role User
+            DbContext.UserRoles.Add(new USERSROLES(username, ROLE.User));
+            DbContext.SaveChanges();
+
+            // dodaj te role, ktore wybral
+            for (int i = 0; i < isRolePicked.Count; i++)
+            {
+                if (isRolePicked[i])
+                { 
+                    DbContext.UserRoles.Add(new USERSROLES(username, ROLE.All[i + 1]));
+                    DbContext.SaveChanges();
+                }
+            }
+            
+            // znajdz najwyzsza wybrana role
+            bestUserRole = ROLE.FindBestRole(DbContext, username); // update
+            return RedirectToAction(nameof(AfterLogin));
+        }
+                                                   
+        // Zadanie 5. Weryfikacja OTP ---------------------------------------------------
+
+        // wybrano opcje logowania OTP
+        [HttpGet]
+        public ActionResult LoginOTP()
+        {
+            return View();
+        }
+
+        // proba logowania OTP - podano uzytkownika i haslo, zweryfikuj ich poprawnosc
+        // a potem pokaz strone z kodem QR, ktory wysyla do Authenticatora z haslem OTP
+        [HttpPost]
+        public ActionResult LoginOTP(AccountModelOTP model)
+        {
+            var users = DbContext.Users.ToList();
+            var passwords = DbContext.Passwords.ToList();
+            if (ModelState.IsValid)
+            {
+                // uzytkownik nie istnieje
+                if (!users.Any(u => u.Name == model.Username))
+                {
+                    ModelState.AddModelError("", "Nie ma takiego użytkownika.");
+                    return View(nameof(Login), model);
+                }
+
+                USER currentUser = users.First
+                    (u => u.Name == model.Username);
+
+                PASSWORD userPassword = passwords.First
+                    (p => p.Username == model.Username);
+
+                // sprawdz, czy uzytkownik podal poprawne haslo
+                string UserRealHashWord = userPassword.HashWord;
+                string UserGivenHashWord = userPassword.Hash(model.Password);
+                bool okPassword = UserRealHashWord.Equals(UserGivenHashWord);
+
+                if (!okPassword)
+                {
+                    ModelState.AddModelError("", "Niepoprawne hasło.");
+                    return View(nameof(Login));
+                }
+
+                // uzytkownik istnieje i podal poprawne haslo, wyslij mu kod OTP
+                realKey = userPassword.OtpKey;
+                return View(nameof(ShowQR), model);
+            }
+            return View(nameof(Login));
+        }
+
+        // weryfikacja podanego przez uzytkownika kodu OTP
+        [HttpPost]
+        public ActionResult ShowQR(AccountModelOTP model)
+        {
+            realKey = DbContext.Passwords.First(p => p.Username == model.Username).OtpKey;
+            byte[] givenKey = Encoding.UTF8.GetBytes(model.OtpCode);
+            var totp = new Totp(realKey);
+            bool isCorrectCode = totp.VerifyTotp(model.OtpCode, out long timeStepMatched);
+
+            if (!isCorrectCode)
+            {
+                return View(model); // zly kod OTP, wroc do strony z kodem QR
+            }
+            // podano dobry kod OTP, zapisz dane zalogowanego uzytkownika
+
+            // dodaj ciastko autentykacji uzytkownika
+            FormsAuthentication.SetAuthCookie(model.Username, false);
+            bestUserRole = ROLE.FindBestRole(DbContext, model.Username);
+            return RedirectToAction(nameof(AfterLogin));
+        }
+    }
+} 
+```
+
+#### Models/USER.cs
+```csharp=
+using System.ComponentModel.DataAnnotations;
+
+namespace Zadanie2.Models
+{
+    public class USER
+    {
+        [Key]
+        [Required]
+        [MaxLength(30)]
+        public string Name { get; set; }
+        [Required]
+        [MaxLength(30)]
+        public string Email { get; set; }
+    }
+}
+```
+    
+#### Models/ROLE.cs
+```csharp=
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+
+namespace Zadanie2.Models
+{
+    public class ROLE
+    {
+        [Key]
+        [Required]
+        [MaxLength(30)]
+        public string Name { get; set; }
+        
+        // dostepne role
+        public const string User = "User";
+        public const string TrustedUser = "TrustedUser";
+        public const string Admin = "Admin";
+        public static readonly string[] All = { User, TrustedUser, Admin };
+
+        // zwraca najlepsza role danego uzytkownika
+        public static string FindBestRole(
+            MvcApplication.AppDbContext DbContext, string username)
+        {
+            // lista wszystkich rol uzytkownika
+            List<string> roles = DbContext.UserRoles
+                .Where(ur => ur.Username == username)
+                .Select(ur => ur.Rolename)
+                .ToList();
+            // szukanie najlepszej z tych rol
+            for (int i = All.Length - 1; i > 0; i--)
+            {
+                if (roles.Contains(All[i]))
+                    return All[i];
+            }
+            return User;
+        }
+    }
+}
+```                                
+                                                   
+#### Models/PASSWORD.cs
+```csharp=
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace Zadanie2.Models
+{
+    public class PASSWORD
+    {
+        [Key]
+        [Required]
+        [MaxLength(30)]
+        public string Username { get; set; }
+        [Required]
+        [MaxLength(64)]
+        public string HashWord { get; set; }
+        [MaxLength(64)]
+        public string Salt { get; set; }
+        [Required]
+        public int Iterations { get; set; }
+        // nowe, klucz glowny w postaci jawnej do weryfikacji OTP z zadania 5
+        [Required]
+        [MaxLength(64)]
+        public byte[] OtpKey { get; set; }
+
+        public PASSWORD() 
+        {
+            Salt = GenerateRandomSalt();
+            Iterations = 8;
+            OtpKey = KeyGeneration.GenerateRandomKey(16); // nowe do 5
+        }
+
+        public string GenerateRandomSalt(int length = 8)
+        {
+            var sb = new StringBuilder();
+            var random = new Random();
+            for (int i = 0; i < length; i++)
+            {
+                int index = random.Next(0, 62);
+                // 0-9, A-Z, a-z
+                char c = (char)(index < 10 ? index + '0' : index < 36 ? index - 10 + 'A' : index - 36 + 'a');
+                sb.Append(c);
+            }
+            return sb.ToString();
+        }
+
+        // haszowanie hasla ---------------------------------------------------
+
+        string ByteArrayToString(byte[] bytes)
+        {
+            var sb = new StringBuilder();
+            foreach (var b in bytes)
+            {
+                sb.Append(b.ToString("X2"));
+            }
+            return sb.ToString();
+        }
+
+        public string Hash(string password)
+        {
+            for (int i = 0; i < Iterations; i++)
+            {
+                password += Salt;
+                byte[] hashBuilder = Encoding.UTF8.GetBytes(password);
+                hashBuilder = HashFunction(hashBuilder);
+                password = ByteArrayToString(hashBuilder);
+            }
+            return password;
+        }
+
+        byte[] HashFunction(byte[] password)
+        {
+            SHA256Managed sha256 = new SHA256Managed();
+            password = sha256.ComputeHash(password);
+            return password;
+        }
+    }
+} 
+```
+    
+#### Models/USERSROLES.cs
+```csharp=
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Zadanie2.Models
+{
+    public class USERSROLES
+    {
+        [Key]
+        [MaxLength(30)]
+        [Column(Order = 1)]
+        public string Username { get; set; }
+        [Key]
+        [MaxLength(30)]
+        [Column(Order = 2)]
+        public string Rolename { get; set; }
+        public USERSROLES() { }
+        public USERSROLES(string username, string roleName)
+        {
+            Username = username;
+            Rolename = roleName;
+        }
+
+        public override bool Equals(object other)
+        {
+            if (!(other is USERSROLES)) return false;
+            USERSROLES ur = (USERSROLES)other;
+            return Username == ur.Username &&
+                Rolename == ur.Rolename;
+        }
+
+        public override string ToString()
+        {
+            return base.ToString();
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+    }
+}                                           
+```
+                                           
+#### Models/UserRegisterModel.cs
+Model użytkownika w trakcie rejestracji nowego konta
+```csharp=
+using System.ComponentModel.DataAnnotations;
+
+namespace Zadanie2.Models
+{
+    public class UserRegisterModel
+    {
+        [Required]
+        [MaxLength(30)]
+        public string Username { get; set; }
+        [Required]
+        [MaxLength(30)]
+        [EmailAddress]
+        public string Email { get; set; }
+        [Required]
+        [DataType(DataType.Password)]
+        [MaxLength(64)]
+        public string Password { get; set; }
+        [Required]
+        [DataType(DataType.Password)]
+        [MaxLength(64)]
+        [Compare("Password")]
+        public string ConfirmPassword { get; set; }
+    }
+}                                       
+```
+                                           
+#### Models/AccountModel.cs
+Model zalogowanego konta użytkownika
+```csharp=
+using System.ComponentModel.DataAnnotations;
+
+namespace Zadanie2.Models
+{
+    public class AccountModel
+    {
+        [Required]
+        [MaxLength(30)]
+        public string Username { get; set; }
+        [Required]
+        [DataType(DataType.Password)]
+        [MaxLength(64)]
+        public string Password { get; set; }
+    }
+}
+```
+    
+#### Models/AccountModelOTP.cs
+Model do logowania 2-składnikowego w zadaniu 5
+```csharp=
+using System.ComponentModel.DataAnnotations;
+
+namespace Zadanie2.Models
+{
+    public class AccountModelOTP
+    {
+        // to samo co AccountModel plus kod OTP podany przez uzytkownika
+        [Required]
+        [MaxLength(30)]
+        public string Username { get; set; }
+        [Required]
+        [DataType(DataType.Password)]
+        [MaxLength(64)]
+        public string Password { get; set; }
+        [MaxLength(64)]
+        public string OtpCode { get; set; }
+    }
+} 
+```
+                                           
+#### Views/Home
+##### Index.cshtml
+```cshtml=
+@* Widok początkowy *@
+<body style="font-size: 36px">
+    <h2>
+        Aby korzystać ze strony trzeba być zalogowanym
+    </h2>
+    <div>
+        Nazwa użytkownika: @User.Identity.Name
+    </div>
+    <div> 
+        @Html.ActionLink("Zaloguj się", "Login") 
+    </div>
+    <div> @* nowe do zadania 5 *@
+        @Html.ActionLink("Zaloguj się OTP", "LoginOTP")
+    </div>
+    <div> 
+        @Html.ActionLink("Zarejestruj się", "SignUp") 
+    </div>
+</body>
+
+```
+##### Login.cshtml
+```cshtml=
+@* widok ekranu logowania *@
+
+@model Zadanie2.Models.AccountModel
+
+<style>
+    button {
+        font-size: 36px;
+        width: 300px;
+        height: 40px
+    }
+</style>
+
+<body style="font-size: 36px">
+    <div>
+        Nazwa użytkownika: @User.Identity.Name
+    </div>
+    @using (var form = Html.BeginForm())
+    {
+        <div>
+            @* wypisuje ewentualne bledy przy probach logowania (zla para uzytkownik/haslo) *@
+            @Html.ValidationSummary()
+        </div>
+        <div>
+            Imie:
+            @Html.TextBoxFor(model => model.Username, new { @style = "font-size: 30px;" })
+        </div>
+        <div>
+            Hasło:
+            @Html.PasswordFor(model => model.Password, new { @style = "font-size: 30px;" })
+        </div>
+        <div>
+            <button type="submit">Zaloguj się</button>
+        </div>
+    }
+    <div>
+        @Html.ActionLink("Powrót do strony początkowej", "Index")
+    </div>
+</body>
+```
+    
+##### LoginOTP.cshtml
+Nowy widok do zadania 5 - 1 etapu logowania z OTP
+```cshtml=
+@* widok ekranu logowania OTP
+    bardzo podobny do zwyklego logowania z roznca,
+    ze mamy guzik "Wyslij kod" zamiast "Zaloguj sie" *@
+
+@model Zadanie2.Models.AccountModelOTP
+
+<style>
+    button {
+        font-size: 36px;
+        width: 300px;
+        height: 100px
+    }
+</style>
+
+<body style="font-size: 36px">
+    <div>
+        Nazwa użytkownika: @User.Identity.Name
+    </div>
+    @using (var form = Html.BeginForm())
+    {
+        <div>
+            @* wypisuje ewentualne bledy przy probach logowania (zla para uzytkownik/haslo) *@
+            @Html.ValidationSummary()
+        </div>
+        <div>
+            Imie:
+            @Html.TextBoxFor(model => model.Username, new { @style = "font-size: 30px;" })
+        </div>
+        <div>
+            Hasło:
+            @Html.PasswordFor(model => model.Password, new { @style = "font-size: 30px;" })
+        </div>
+        <div>
+            <button type="submit">Wyślij kod weryfikacyjny</button>
+        </div>
+    }
+    <div>
+        @Html.ActionLink("Powrót do strony początkowej", "Index")
+    </div>
+</body> 
+```
+    
+##### ShowQR.cshtml
+Nowy widok do zadania 5 - 2 etapu logowania z OTP
+```cshtml=
+@* widok, w ktorym uzytkownik weryfikuje sie na 2 etapie za pomoca kodu OTP *@
+
+@using OtpNet;
+@using QRCoder; @* References -> Manage NuGet packages -> Browse -> Install QRCoder *@
+@model Zadanie2.Models.AccountModelOTP
+
+<style>
+    button {
+        font-size: 36px;
+        width: 500px;
+        height: 80px
+    }
+    body {
+        font-size: 36px;
+    }
+</style>
+
+<body>
+    <div>
+        Nazwa użytkownika: @User.Identity.Name
+    </div>
+    <div>
+        Oto twój kod QR do logowania 2-składnikowego
+    </div>
+    <div>
+        @{
+            var qrGenerator = new QRCodeGenerator();
+            var uri = $"otpauth://totp/{Model.Username}?secret=" +
+                    $"{Base32Encoding.ToString(Zadanie2.Controllers.HomeController.realKey)}";
+            var qrCodeData = qrGenerator.CreateQrCode(uri, QRCodeGenerator.ECCLevel.L);
+            var bitmap = new BitmapByteQRCode(qrCodeData).GetGraphic(10);
+            var src = string.Format("data:image/png;base64,{0}", Convert.ToBase64String(bitmap));
+        }
+        <img src="@src" />
+    </div>
+    @using (var form = Html.BeginForm("ShowQR", "Home", FormMethod.Post))
+    {
+        <div>
+            <label>Podaj kod: </label>
+            @Html.TextBoxFor(m => m.OtpCode, new { @style = "font-size: 30px;" })
+            @Html.HiddenFor(m => m.Username)
+            @Html.HiddenFor(m => m.Password)
+        </div>
+        <div>
+            <button type="submit">Potwierdź kod</button>
+        </div>
+    }
+    <div>
+        @Html.ActionLink("Powrót do strony początkowej", "Index")
+    </div>
+</body> 
+```
+    
+##### SignUp.cshtml
+```cshtml=
+@* widok ekranu rejestracji nowego użytkownika *@
+
+@model Zadanie2.Models.UserRegisterModel
+
+<style>
+    button {
+        font-size: 36px;
+        width: 300px;
+        height: 80px
+    }
+</style>
+
+<body style="font-size: 36px">
+    <div>
+        Nazwa użytkownika: @User.Identity.Name
+    </div>
+    @using (var form = Html.BeginForm())
+    {
+        <div>
+            @* wypisuje ewentualne bledy przy probach rejestracji (imie/email zajety) *@
+            @Html.ValidationSummary()
+        </div>
+        <div>
+            Imie:
+            @Html.TextBoxFor(model => model.Username, new { @style = "font-size: 30px;" })
+        </div>
+        <div>
+            Email:
+            @Html.TextBoxFor(model => model.Email, new { @style = "font-size: 30px;" })
+        </div>
+        <div>
+            Hasło:
+            @Html.PasswordFor(model => model.Password, new { @style = "font-size: 30px;" })
+        </div>
+        <div>
+            Powtórz hasło:
+            @Html.PasswordFor(model => model.ConfirmPassword, new { @style = "font-size: 30px;" })
+        </div>
+        <div>
+            <button type="submit">Zarejestruj użytkownika</button>
+        </div>
+    }
+    <div>
+        @Html.ActionLink("Powrót do strony początkowej", "Index")
+    </div>
+</body>
+```
+    
+##### AfterLogin.cshtml
+```cshtml=
+@* widok ekranu po zalogowaniu/rejestracji *@
+
+<style>
+    input {
+        font-size: 36px;
+        width: 300px;
+        height: 50px
+    }
+</style>
+
+<body style="font-size: 36px">
+    <div>
+        Nazwa użytkownika: @User.Identity.Name
+    </div>
+    <div>
+        Typ użytkownika: @Zadanie2.Controllers.HomeController.bestUserRole
+    </div>
+    <table cellspacing="10" border="0">
+        <tr>
+            <th>Akcja</th>
+            <th>Wymagane uprawnienia</th>
+        </tr>
+    </table>
+    <div>
+        @using (Html.BeginForm("RoleChange", "Home", FormMethod.Get))
+        {
+            @*@Html.AntiForgeryToken()*@
+            <input type="submit" value="zmień rolę" /> <label>Każdy</label>
+        }
+    </div>
+    <div>
+        @using (Html.BeginForm("SeeUserList", "Home", FormMethod.Get))
+        {
+            @*@Html.AntiForgeryToken()*@
+            <input type="submit" value="zobacz listę użytkowników" style="height: fit-content; white-space: normal" />
+            <label>TrustedUser lub Admin</label>
+        }
+    </div>
+    <div>
+        @using (Html.BeginForm("LogOut", "Home", FormMethod.Post))
+        {
+            @Html.AntiForgeryToken()
+            <input type="submit" value="Wyloguj się" /> <label>Każdy</label>
+        }
+    </div>
+</body>
+```
+    
+##### RoleChange.cshtml
+```cshtml=
+@* pozwala zmienić rolę aktualnie zalogowanego użytkownika *@
+
+@model List<bool>
+
+<style>
+    input {
+        font-size: 36px;
+        width: 300px;
+        height: 50px
+    }
+</style>
+
+<body style="font-size: 36px">
+    <div>
+        Nazwa użytkownika: @User.Identity.Name
+    </div>
+    @using (var form = Html.BeginForm("RoleChange", "Home", FormMethod.Post))
+    {
+        <div>
+            <label for="roleSelect" style="font-size: 32px">Zaznacz które role chcesz mieć:</label>
+        </div>
+        <div id="roleSelect" style="font-size: 32px">
+            <input type="checkbox" checked="checked" disabled="disabled" /> @* zawsze jest User *@
+            <label for="user">User</label><br>
+            @Html.CheckBoxFor(c => Model[0]) @* TrustedUser *@
+            <label for="trustedUser">TrustedUser</label><br>
+            @Html.CheckBoxFor(c => Model[1]) @* Admin *@
+            <label for="admin">Admin</label>
+        </div>
+        <div>
+            <input type="submit" value="Potwierdź nową rolę" style="height: fit-content; white-space: normal" />
+        </div>
+    }
+    <div>
+        @using (Html.BeginForm("AfterLogin", "Home", FormMethod.Get))
+        {
+            @*@Html.AntiForgeryToken()*@
+            <input type="submit" value="Wróć do ekranu wyboru" style="height: fit-content; white-space: normal" />
+        }
+    </div>
+</body> 
+```
+   
+##### SeeUserList.cshtml
+```cshtml=
+@* wypisuje wszystkich użytkowników *@
+
+@model List<Zadanie2.Models.USER>
+
+<style>
+    input {
+        font-size: 36px;
+        width: 300px;
+        height: 50px
+    }
+</style>
+
+<body style="font-size: 36px">
+    <div>
+        Nazwa użytkownika: @User.Identity.Name
+    </div>
+    <div style="font-size: 72px">
+        Lista Użytkowników
+    </div>
+    <table class="table" cellspacing="10" border="1">
+        <tr>
+            <th>Imię</th>
+            <th>Email</th>
+        </tr>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td> @Html.DisplayFor(modelItem => item.Name) </td>
+                <td> @Html.DisplayFor(modelItem => item.Email) </td>
+            </tr>
+        }
+    </table>
+    <div>
+        @using (Html.BeginForm("AfterLogin", "Home", FormMethod.Get))
+        {
+            @*@Html.AntiForgeryToken()*@
+            <input type="submit" value="Wróć do ekranu wyboru" style="height: fit-content; white-space: normal"/>
+        }
+    </div>
+    <div>
+        @using (Html.BeginForm("LogOut", "Home", FormMethod.Post))
+        {
+            @Html.AntiForgeryToken()
+            <input type="submit" value="Wyloguj się" />
+        }
+    </div>
+</body>
+```
+    
+#### Global.asax.cs
+```csharp=
+using Microsoft.Ajax.Utilities;
+using System.Collections.Generic;
+using System.Data.Entity;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using Zadanie2.Controllers;
+using Zadanie2.Models;
+
+namespace Zadanie2
+{
+    public class MvcApplication : HttpApplication
+    {
+        protected void Application_Start()
+        {
+            // Database.SetInitializer<AppDbContext>(null);
+            AreaRegistration.RegisterAllAreas();
+            RouteConfig.RegisterRoutes(RouteTable.Routes);
+            // new AppDbContext().InitRoles(); // tylko raz aby zainicjalizowac tabele ROLES
+        }
+
+        public class AppDbContext : DbContext
+        {
+            public AppDbContext() : base(BaseController.databaseName) {}
+            public AppDbContext(string databaseName) : base(databaseName) {}
+            public DbSet<USER> Users { get; set; }
+            public DbSet<PASSWORD> Passwords { get; set; }
+            public DbSet<ROLE> Roles { get; set; }
+            public DbSet<USERSROLES> UserRoles { get; set; }
+
+            public void InitRoles()
+            {
+                List<ROLE> roles = new List<ROLE>() { 
+                    new ROLE() { Name = ROLE.User },
+                    new ROLE() { Name = ROLE.TrustedUser },
+                    new ROLE() { Name = ROLE.Admin }
+                };
+                Roles.AddRange(roles);
+                SaveChanges();
+            }
+        }
+    }
+} 
+```
+    
+#### Web.config
+```config=
+<connectionStrings>
+	<add name="AppDbContext"
+	connectionString="Data Source=(LocalDB)\MSSQLLocalDB;
+                          AttachDbFilename=App_Data\UserDatabase.mdf;
+			   Integrated Security=True"
+	providerName="System.Data.SqlClient" />
+</connectionStrings>
+<system.web>
+    ...
+    <!-- potrzebne aby znac zalogowanego uzytkownika -->
+    <authentication mode="Forms">
+         <forms name=".ASPXAUTH" loginUrl="~/Home/Login" 
+	         timeout="30" protection="All" />
+    </authentication>
+</system.web>
+```
+
+#### Odpowiedzi na pytania do zadania 2:
+
+a) Po stronie serwera hasła użytkownika nie można przechowywać w postaci jawnej, ponieważ jest to bardzo niebezpieczne dla prywatności i bezpieczeństwa użytkowników. Jeśli baza danych z hasłami zostanie skradziona przez cyberprzestępców, to będą oni mogli uzyskać dostęp do wszystkich kont użytkowników i wykorzystać je do własnych celów. Dlatego po stronie serwera hasła powinny być przechowywane w postaci zaszyfrowanej lub zahaszowanej, aby utrudnić lub uniemożliwić ich odczytanie.
+
+b) Niektóre funkcje skrótu są niewskazane w praktyce, ponieważ są zbyt słabe lub podatne na ataki. Na przykład, funkcje skrótu MD5 i SHA-1 są uważane za przestarzałe i niebezpieczne, ponieważ można je łatwo złamać za pomocą technik takich jak atak z urodzinami, atak z tęczową tablicą lub atak z kolizją. Zamiast nich, zaleca się stosować nowocześniejsze i silniejsze funkcje skrótu, takie jak SHA-256, SHA-3 lub bcrypt.
+
+c) Dodatkowa wartość (salt) jest potrzebna przy wyliczaniu skrótu, aby zwiększyć entropię i zróżnicowanie haseł. Dzięki temu, nawet jeśli dwa hasła są takie same, to ich skróty będą różne, ponieważ będą zawierać różne wartości salt. Salt utrudnia ataki słownikowe lub z tęczową tablicą, ponieważ wymaga on od przestępcy wygenerowania nowej tablicy dla każdej wartości salt.
+
+d) Hasła przechowuje się w osobnej tabeli, ponieważ jest to dobra praktyka związana z normalizacją bazy danych. Normalizacja polega na podziale danych na mniejsze i prostsze tabele, które są ze sobą powiązane za pomocą kluczy obcych. Dzięki temu, można uniknąć redundancji, sprzeczności i anomalii danych, a także poprawić wydajność i bezpieczeństwo bazy danych. Jeśli hasła byłyby przechowywane w tej samej tabeli, co lista użytkowników, to mogłoby to prowadzić do problemów takich jak:
+
+- Zwiększenie rozmiaru tabeli i czasu dostępu do niej.
+- Utrudnienie zmiany lub usunięcia haseł bez wpływu na inne dane użytkowników.
+- Ułatwienie dostępu do haseł przez nieuprawnione osoby lub programy, które mają dostęp do tabeli użytkowników.
+
+e) Mechanizmy ochrony przed atakami typu brute-force, które można zastosować w typowej aplikacji internetowej, to:
+
+- Ograniczenie liczby prób logowania z jednego adresu IP lub dla jednego użytkownika. Jeśli liczba prób przekroczy ustalony próg, to można zablokować dalsze próby na określony czas lub wymagać dodatkowego uwierzytelniania, np. kodu z SMS-a lub CAPTCHA.
+- Wprowadzenie opóźnienia lub zwolnienia tempa logowania. Można to zrobić poprzez dodanie sztucznego czasu oczekiwania lub zwiększanie czasu oczekiwania po każdej nieudanej próbie logowania. Dzięki temu, można zniechęcić lub spowolnić atakującego, który musi czekać dłużej na odpowiedź serwera.
+- Szyfrowanie i haszowanie haseł po stronie klienta i serwera. Można to zrobić poprzez zastosowanie protokołu HTTPS, który zapewnia bezpieczne połączenie między przeglądarką a serwerem, oraz funkcji skrótu i salt, które utrudniają odczytanie haseł nawet jeśli zostaną przechwycone.
+
+f) Z wykładu:
+Typowy scenariusz, w którym użytkownik traci dostęp do konta często rozwiązuje się w taki sposób, że na dedykowanej stronie użytkownik podaje adres e-mail związany z kontem. Aplikacja generuje parę identyfikator o dużej entropii (np. guid) – login
+i zapisuje tę parę w pomocniczej tabeli w bazie danych, a następnie aplikacja używa protokołu SMTP do wysłania do użytkownika wiadomości email z linkiem postaci
+https://aplikacja.com/PasswordReset?token={identyfikator}
+Użytkownik klikając w link nawiguje do strony, która w parametrze o nazwie token dostaje wartość identyfikatora. Są dwa przypadki:
+• Identyfikator nie występuje w pomocniczej tabeli – użytkownikowi zwraca się informację o błędzie (niepoprawny token). Dodatkowo aplikacja może zweryfikować kiedy token był wydany i na przykład nie akceptować tokenów starszych niż 24h
+• Identyfikator występuje w pomocniczej tabeli – w tej pomocniczej tabeli występuje też login. Aplikacja ma gwarancję że ktoś kto kliknął w link ma na pewno dostęp do adresu email związanego z kontem o podanym loginie. Takiemu użytkownikowi można wyświetlić stronę umożliwiającą bezwarunkowe ustawienie nowego hasła do tego właśnie konta.
+
+#### Do zadania 3
+- Dostęp do zasobów można zabezpieczyć przez wskazanie ról użytkowników którzy mogliby do tych ról mieć dostęp.
+    Do tego w kodzie służy 
+    ```csharp=
+    [CustomAuthorization(Roles="Admin,TrustedUser")]
+    ```
+    które w tym przykładzie oznacza, że tylko użytkownicy o rolach Admin i/lub TrustedUser mogą odwiedzić zasób. Jeśli ktoś nie ma żadnej z tych ról to dostaje Error 403 forbidden.
+-  Pokaż, że można to robić zarówno dla pojedyńczych zasobów (sekcja location w web.config) oraz całych podfolderów (osobny, zdegenerowany web.config).
+    ???
+- W przypadku MVC pokaż jak wymagać określonych ról użytkownika za
+pomocą atrybutu Authorize.
+    Tak jak wyżej tylko nazwa Authorize zamiast CustomAuthorization.
+    Stworzyłem własny filtr autoryzacyjny, bo nie wiedziałem, jak sprawić, aby Authorize traktował elementy tabeli USERSROLES jako pary użytkownik - rola tego użytkownika.
