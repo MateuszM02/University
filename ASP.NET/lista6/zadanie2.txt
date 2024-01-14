@@ -1,0 +1,147 @@
+### Zadanie 2
+Wzorując się na przykładzie z wykładu zaimplementować własne rozszerzenie Login
+z dwoma polami tekstowymi na potrzeby logowania użytkowników    
+
+#### Models/Model.cs
+```csharp=
+namespace Zadanie2.Models
+{
+    public class Model
+    {
+        public string UserName { get; set; }
+        public string Password { get; set; }
+    }
+}
+```
+    
+#### Views/Home/Index.cshtml
+```cshtml=
+@model Zadanie2.Models.Model
+@using Zadanie2.Controllers
+
+@using (var form = Html.BeginForm())
+{
+    // @Html.Login("UserName", "Password") // wersja 1
+    @Html.LoginFor(m => m.UserName, m => m.Password) // wersja 2
+    <button type="submit">Zapisz</button>
+}  
+```
+    
+#### Views/Home/Info.cshtml 
+(nie jest wymagane, służy do pokazania, że pola dobrze działają)
+```cshtml=
+@model Zadanie2.Models.Model
+
+@Html.Label("Twoje imie: " + Model.UserName)
+<br />
+@Html.Label("Twoje hasło: " + Model.Password)
+```
+    
+#### Controllers/HomeController.cs
+```csharp=
+using System;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Text;
+using System.Web;
+using System.Web.Mvc;
+using Zadanie2.Models;
+
+namespace Zadanie2.Controllers
+{
+    public class HomeController : Controller
+    {
+        // wywolywane tuz po uruchomieniu aplikacji
+        [HttpGet]
+        public ActionResult Index()
+        {
+            return View();
+        }
+
+        // wywolywane po wcisnieciu guzika "Zapisz" (nie jest wymagane w zadaniu)
+        [HttpPost]
+        public ActionResult Index(Model model)
+        {
+            return View("Info", model);
+        }
+    }
+
+    /// <summary>
+    /// Klasa do wygodnego tworzenia tagow html w C#
+    /// </summary>
+    public static class CustomCreate
+    {
+        public static TagBuilder Label(string name, string _for, string innerText)
+        {
+            TagBuilder tb = new TagBuilder("label");
+            tb.MergeAttribute("name", name);
+            tb.MergeAttribute("for", _for);
+            tb.SetInnerText($"{innerText}: ");
+            return tb;
+        }
+
+        public static TagBuilder Input(string name, string type = "text")
+        {
+            TagBuilder tb = new TagBuilder("input");
+            tb.MergeAttribute("name", name); 
+            tb.MergeAttribute("type", type);
+            
+            return tb;
+        }
+
+        /// <summary>
+        /// Laczy tablice tagow w jeden fragment strony html
+        /// </summary>
+        /// <param name="firstLineBreak">Po ilu tagach ma nastapic pierwszy line break</param>
+        /// <param name="lineBreakFrequency">Co ile tagow ma nastepowac line break</param>
+        /// <param name="tags">Tablica tagow, ktore maja stworzyc strone</param>
+        /// <returns>string odpowiadajacy fragmentowi strony html</returns>
+        public static string Concat(int firstLineBreak, int lineBreakFrequency, params TagBuilder[] tags)
+        {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < Math.Min(firstLineBreak, tags.Count()); i++)
+            {
+                sb.Append(tags[i].ToString());
+            }
+            sb.Append(new TagBuilder("br"));
+            for (int i = firstLineBreak; i < tags.Count(); i++)
+            {
+                sb.Append(tags[i].ToString());
+                if (i % lineBreakFrequency == firstLineBreak)
+                    sb.Append(new TagBuilder("br"));
+            }
+            sb.Append(new TagBuilder("br"));
+            return sb.ToString();
+        }
+    }
+
+    public static class CustomHtmlHelper
+    {
+        // wersja 1 zadania
+        public static HtmlString Login(this HtmlHelper _, string username, string password)
+        {
+            TagBuilder tbLabelUsername = CustomCreate.Label(name: "labelUsername", _for: username, innerText: username);
+            TagBuilder tbInputUsername = CustomCreate.Input(name: username);
+            TagBuilder tbLabelPassword = CustomCreate.Label(name: "labelPassword", _for: password, innerText: password);
+            TagBuilder tbInputPassword = CustomCreate.Input(name: password);
+
+            string loginHtml = CustomCreate.Concat(
+                firstLineBreak: 2,
+                lineBreakFrequency: 2,
+                tags: new[] { tbLabelUsername, tbInputUsername, tbLabelPassword, tbInputPassword });
+            return new HtmlString(loginHtml);
+        }
+
+        // wersja 2 zadania
+        public static HtmlString LoginFor<TModel, TProperty>(
+            this HtmlHelper<TModel> _,
+            Expression<Func<TModel, TProperty>> PropertyUsername,
+            Expression<Func<TModel, TProperty>> PropertyPassword)
+        {
+            string username = ExpressionHelper.GetExpressionText(PropertyUsername);
+            string password = ExpressionHelper.GetExpressionText(PropertyPassword);
+            return Login(_, username, password);
+        }
+    }
+}
+```
