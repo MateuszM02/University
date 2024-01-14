@@ -1,0 +1,122 @@
+### Zadanie 1
+Powtórzyć przedstawiony na wykładzie przykład własnego routera dla ścieżek typu CMS w obu wariantach, .NET.Framework i .NET.Core (każdy za 1 punkt)
+
+#### Program.cs
+```csharp=
+using Microsoft.AspNetCore.Mvc.Routing;
+
+var builder = WebApplication.CreateBuilder(args);
+var services = builder.Services;
+
+services.AddControllersWithViews();
+services.AddSingleton<Zadanie1core.CMSCustomRouteTransformer>();
+
+var app = builder.Build();
+
+app.UseRouting();
+
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapDynamicControllerRoute<Zadanie1core.CMSCustomRouteTransformer>("CMS/{**sitepage}");
+    endpoints.MapControllerRoute(
+        name: "default",
+        pattern: "{controller=Page}/{action=Index}/{id?}");
+});
+
+app.MapGet("/", () => "Strona główna. CMS znajduje się w /CMS/any_sitename");
+
+app.Run();
+
+namespace Zadanie1core
+{
+    public class CMSCustomRouteTransformer : DynamicRouteValueTransformer
+    {
+        public const string DEFAULTPAGEEXTENSION = ".html";
+        public const string CMS = "CMS";
+        public const string SITENAME = "siteName";
+        public const string PAGENAME = "pageName";
+        public override async ValueTask<RouteValueDictionary> TransformAsync(HttpContext httpContext, RouteValueDictionary values)
+        {
+            if (!values.ContainsKey("sitepage")) return values;
+            var virtualPath = values["sitepage"]?.ToString();
+            if (string.IsNullOrEmpty(virtualPath)) 
+            {
+                values["controller"] = "Page";
+                values["action"] = "Render";
+                values[SITENAME] = "";
+                values[PAGENAME] = "index.html";
+                return values; 
+            }
+            string[] segments = virtualPath.ToLower().Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length >= 0)
+            {
+                if (segments.Last().IndexOf(DEFAULTPAGEEXTENSION) > 0)
+                {
+                    values["controller"] = "Page";
+                    values["action"] = "Render";
+                    values[SITENAME] = string.Join("/", segments.Take(segments.Length - 1).ToArray());
+                    values[PAGENAME] = segments.Last()[..segments.Last().IndexOf(".")];
+                }
+                else if (segments.Last().IndexOf(".") < 0)
+                {
+                    values["controller"] = "Page";
+                    values["action"] = "Render";
+                    values[SITENAME] = string.Join("/", segments.ToArray());
+                    values[PAGENAME] = "index.html";
+                }
+            }
+            return values;
+        }
+    }
+} 
+```
+    
+#### Controllers/PageController.cs
+```csharp=
+using Microsoft.AspNetCore.Mvc;
+
+namespace Zadanie1core.Controllers
+{
+    public class PageController : Controller
+    {
+        public IActionResult Render()
+        {
+            var routeData = Request.HttpContext.GetRouteData().Values;
+
+            string? site = routeData[CMSCustomRouteTransformer.SITENAME] as string;
+            string? page = routeData[CMSCustomRouteTransformer.PAGENAME] as string;
+
+            var model = new Models.PageRenderModel()
+            {
+                Site = site,
+                Page = page,
+            };
+
+            return View(model);
+        }
+    }
+}
+```
+    
+#### Models/PageRenderModel.cs
+```csharp=
+namespace Zadanie1core.Models
+{
+    public class PageRenderModel
+    {
+        public string? Site { get; set; }
+        public string? Page { get; set; }
+    }
+} 
+```
+
+#### Views/Page/Render.cshtml
+```cshtml=
+@model Zadanie1core.Models.PageRenderModel
+
+<h1>CMS</h1>
+
+site: @Model.Site
+<br />
+page: @Model.Page 
+```
