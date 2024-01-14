@@ -1,0 +1,87 @@
+### Zadanie 1
+Zaprezentuj w praktyce przedstawiany na wykładzie mechanizm autentykacji zintegrowanej (Windows). Ściślej - przygotuj aplikację, w której użytkownik zostanie rozpoznany
+jako aktualnie zalogowany użytkownik systemu operacyjnego (formalnie: użytkownik który jest właścicielem procesu przeglądarki internetowej).
+
+UWAGA! Na Windows 11 nie działało mi (na Windows 10 w porządku).
+
+#### Controllers/HomeController.cs
+```csharp=
+using System.Web.Mvc;
+using Zadanie1.Models;
+
+namespace Zadanie1.Controllers
+{
+    public class HomeController : Controller
+    {
+        public ActionResult Index()
+        {
+            // wlasciciel procesu
+            var user = System.Security.Principal.WindowsIdentity.GetCurrent();
+
+            /*  nazwe uzytkownika bierzemy z Windows authentication
+                jej wartosc domyslnie jest pusta ""
+                nalezy zmienic Project Properties -> Windows Authentication na Enabled
+                W pliku Web.config dodac Authentication oraz Autorization z deny users"?"
+                wtedy nazwa uzytkownika zostanie ustalona na nazwe wlasciciela procesu */
+            var principal = System.Web.HttpContext.Current.User.Identity;
+            
+            HomeModel model = new HomeModel(user, principal, user.IsAuthenticated);
+            return View(model);
+        }
+    }
+} 
+```
+    
+#### Models/HomeModel.cs
+```csharp=
+using System.Security.Principal;
+
+namespace Zadanie1.Models
+{
+    public class HomeModel
+    {
+        public readonly WindowsIdentity user;
+        public readonly IIdentity principal;
+        public readonly bool isAuthorizedUser;
+
+        public HomeModel(WindowsIdentity user, IIdentity principal, bool isAuthorizedUser)
+        {
+            this.user = user;
+            this.principal = principal;
+            this.isAuthorizedUser = isAuthorizedUser;
+        }
+    }
+} 
+```
+    
+#### Views/Home/Index.cshtml
+```cshtml=
+@model Zadanie1.Models.HomeModel
+
+<div>Właściciel procesu: @Model.user.Name</div>
+<div>Użytkownik: @Model.principal.Name</div>
+<div>Czy właściciel zalogowany: @Model.isAuthorizedUser</div> 
+```
+    
+#### Web.config
+Wewnątrz <system.web> dołączyć:
+```config=
+<authentication mode="Windows" />  
+<authorization>
+    <deny users="?"/>  <!-- wszyscy niezalogowani -->
+    <allow users="*"/>
+</authorization> 
+```
+    
+Autentykacja w trybie podstawowym polega na tym, że przeglądarka zapyta użytkownika o login i hasło, a następnie wyśle je do serwera za pomocą nagłówka Authorization z kodowaniem Base64. 
+Autentykacja w trybie zintegrowanym polega na tym, że użytkownik systemu lub domeny zostanie rozpoznany automatycznie przez serwer za pomocą protokołów Kerberos lub NTLM. 
+
+Oto niektóre z różnic między tymi dwoma metodami:
+
+1. Autentykacja w trybie podstawowym jest prostsza w implementacji i obsłudze, ponieważ nie wymaga dodatkowych konfiguracji ani zależności od domeny systemu Windows.
+    Autentykacja w trybie zintegrowanym jest bardziej skomplikowana i wymaga odpowiedniego ustawienia usług IIS, 
+domeny systemu Windows i protokołów Kerberos lub NTLM.
+2. Autentykacja w trybie podstawowym jest mniej bezpieczna, ponieważ poświadczenia użytkownika są wysyłane w postaci niezaszyfrowanej lub słabo zaszyfrowanej, co naraża je na przechwycenie lub podmianę. 
+Autentykacja w trybie zintegrowanym jest bardziej bezpieczna, ponieważ poświadczenia użytkownika są wysyłane w postaci zaszyfrowanej i uwierzytelnione za pomocą biletów lub tokenów, co zapobiega ich kradzieży lub fałszowaniu.
+3. Autentykacja w trybie podstawowym jest mniej wygodna dla użytkownika, ponieważ wymaga od niego podawania loginu i hasła za każdym razem, gdy chce uzyskać dostęp do zasobu. 
+  Autentykacja w trybie zintegrowanym jest bardziej wygodna dla użytkownika, ponieważ nie wymaga od niego podawania loginu
