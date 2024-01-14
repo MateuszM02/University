@@ -1,0 +1,344 @@
+### Zadanie 5
+
+Do App_Data dodajemy Bazę Danych (u mnie CustomerDatabase.mdf):
+Add New Item -> C# -> Data -> SQL Server Database
+
+Baza ma tabelę Table z polami ID (klucz), FirstName, LastName. 
+Można dodać swoje pola tylko wtedy trzeba zmienić model.
+```sql=
+CREATE TABLE [dbo].[TABLE]
+(
+    [ID] INT NOT NULL PRIMARY KEY,
+    [FirstName] VARCHAR(30) NOT NULL,
+    [LastName] VARCHAR(30) NOT NULL
+)
+```
+
+#### Controllers/BaseController.cs
+```csharp=
+using System;
+using System.Web.Mvc;
+using static Zadanie5.MvcApplication;
+
+namespace Zadanie5.Controllers
+{
+    public abstract class BaseController : Controller, IDisposable
+    {
+        private AppDbContext _context; // kontekst dostepu do bazy danych
+        public AppDbContext DbContext
+        {
+            get
+            {
+                if ( _context == null)
+                    _context = new AppDbContext();
+                return _context;
+            }
+        }
+
+        public new void Dispose()
+        {
+            _context?.Dispose();
+        }
+    }
+}
+```
+
+#### Controllers/CustomerController.cs
+```csharp=
+using System.Linq;
+using System.Web.Mvc;
+using static Zadanie5.MvcApplication;
+
+namespace Zadanie5.Models
+{
+    public class CustomerController : Controller
+    {
+        [HttpGet]
+        public ActionResult Index()
+        {
+            var context = new AppDbContext();
+            var customers = context.Customers.ToList();
+            return View(customers);
+        }
+
+        [HttpGet]
+        public ActionResult Add()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult Add(Customer model)
+        {
+            if (ModelState.IsValid)
+            {
+                DbContext.Customers.Add(model);
+                DbContext.SaveChanges();
+                return RedirectToAction("Index");
+            }
+            return View(model);
+        }
+
+        [HttpGet]
+        public ActionResult Edit(string id)
+        {
+            int _id = int.Parse(id);
+            var customer = DbContext.Customers.First(s => s.CustomerID.Equals(_id));
+            if (customer != null)
+                return View(customer);
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult Edit(Customer model)
+        {
+            if (ModelState.IsValid)
+            {
+                var customer = DbContext.Customers.First(s => s.CustomerID.Equals(model.CustomerID));
+                customer.FirstName = model.FirstName;
+                customer.LastName = model.LastName;
+                DbContext.SaveChanges();
+                return RedirectToAction("Index");
+            }
+            return View(model);
+        }
+
+        [HttpGet]
+        public ActionResult Delete(string id)
+        {
+            int _id = int.Parse(id);
+            var customer = DbContext.Customers.First(s => s.CustomerID.Equals(_id));
+            if (customer != null)
+                return View(customer);
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult Delete(int id)
+        {
+            var customer = DbContext.Customers.First(s => s.CustomerID.Equals(id));
+            if (customer != null)
+            {
+                DbContext.Customers.Remove(customer);
+                DbContext.SaveChanges();
+            }
+            return RedirectToAction("Index");
+        }
+    }
+}
+```
+
+#### Models/Customer.cs
+```csharp=
+using System.ComponentModel.DataAnnotations;
+
+namespace Zadanie5.Models
+{
+    public class Customer
+    {
+        [Key]
+        public int CustomerID { get; set; }
+        [Required(ErrorMessage = "Imie jest wymagane")]
+        public string FirstName { get; set; }
+        [Required(ErrorMessage = "Nazwisko jest wymagane")]
+        public string LastName { get; set; }
+    }
+}
+```
+
+#### Views/Customer
+##### Index.cshtml
+```cshtml=
+@model IEnumerable<Zadanie5.Models.Customer>
+
+@{
+    ViewBag.Title = "Index";
+}
+
+<style>
+    button {
+        font-size: 36px;
+        width: 150px;
+        height: 40px
+    }
+</style>
+<body style="font-size: 36px">
+    <p>
+        @Html.ActionLink("Dodawanie", "Add")
+    </p>
+    <div style="font-size: 72px">Lista Klientów</div>
+    <table class="table" cellspacing="10" border="1">
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td> @Html.DisplayFor(modelItem => item.CustomerID) </td>
+                <td> @Html.DisplayFor(modelItem => item.FirstName) </td>
+                <td> @Html.DisplayFor(modelItem => item.LastName) </td>
+                <td>
+                    @Html.ActionLink("Edycja", "Edit", new { id = item.CustomerID }) |
+                    @Html.ActionLink("Usuwanie", "Delete", new { id = item.CustomerID })
+                </td>
+            </tr>
+        }
+    </table>
+</body>
+```
+
+##### Add.cshtml
+```cshtml=
+@model Zadanie5.Models.Customer
+
+@{
+    ViewBag.Title = "Dodawanie";
+}
+
+<style>
+    button {
+        font-size: 36px;
+        width: 150px;
+        height: 40px
+    }
+</style>
+
+@using (var form = Html.BeginForm())
+{
+    <label>Customer ID: </label>
+    @Html.TextBoxFor(model => model.CustomerID)
+    <br />
+    <label>First name: </label>
+    @Html.TextBoxFor(model => model.FirstName)
+    <br />
+    <label>Last name: </label>
+    @Html.TextBoxFor(model => model.LastName)
+    <button type="submit">Dodaj</button>
+}
+
+<div>
+    @Html.ActionLink("Powrót do listy", "Index")
+</div>
+```
+
+##### Delete.cshtml
+```cshtml=
+@model Zadanie5.Models.Customer
+
+@{
+    ViewBag.Title = "Usuwanie";
+}
+
+<h2>Usuwanie</h2>
+
+<h3>Czy jesteś pewien, że chcesz usunąć tego klienta?</h3>
+<div>
+    <table cellspacing="5" style="border-collapse: collapse;">
+        <tr>
+            <td> @Html.DisplayNameFor(model => model.CustomerID) </td>
+            <td> @Html.DisplayFor(model => model.CustomerID) </td>
+        </tr>
+        <tr style="border-top: 1px solid black; border-bottom: 1px solid black">
+            <td> @Html.DisplayNameFor(model => model.FirstName) </td>
+            <td> @Html.DisplayFor(model => model.FirstName) </td>
+        </tr>
+        <tr>
+            <td> @Html.DisplayNameFor(model => model.LastName) </td>
+            <td> @Html.DisplayFor(model => model.LastName) </td>
+        </tr>
+    </table>
+
+    @using (Html.BeginForm())
+    {
+        @Html.AntiForgeryToken()
+        <div>
+            <input type="submit" value="Usuń" />
+            @Html.ActionLink("Powrót do listy", "Index")
+        </div>
+    }
+</div>
+```
+
+##### Edit.cshtml
+```cshtml=
+@model Zadanie5.Models.Customer
+
+@{
+    ViewBag.Title = "Edycja";
+}
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+    <div>
+        <h4>Student</h4>
+        <hr />
+        @*@Html.ValidationSummary(true, "", new { @class = "text-danger" })*@
+        @Html.HiddenFor(model => model.CustomerID)
+
+        <div>
+            @Html.LabelFor(model => model.FirstName)
+            <div>
+                @Html.EditorFor(model => model.FirstName)
+                @Html.ValidationMessageFor(model => model.FirstName)
+            </div>
+        </div>
+        <div>
+            @Html.LabelFor(model => model.LastName)
+            <div>
+                @Html.EditorFor(model => model.LastName)
+                @Html.ValidationMessageFor(model => model.LastName)
+            </div>
+        </div>
+
+        <div>
+            <div>
+                <input type="submit" value="Zapisz" />
+            </div>
+        </div>
+    </div>
+}
+
+<div>
+    @Html.ActionLink("Powrót do listy", "Index")
+</div>
+```
+
+#### Global.asax
+```csharp=
+using System.Data.Entity;
+using System.Web.Mvc;
+using System.Web.Routing;
+using Zadanie5.Models;
+
+namespace Zadanie5
+{
+    public class MvcApplication : System.Web.HttpApplication
+    {
+        protected void Application_Start()
+        {
+            Database.SetInitializer<AppDbContext>(null);
+            AreaRegistration.RegisterAllAreas();
+            RouteConfig.RegisterRoutes(RouteTable.Routes);
+        }
+
+        public class AppDbContext : DbContext
+        {
+            public AppDbContext() : base("Db") { }
+            public DbSet<Customer> Customers { get; set; }
+        }
+    }
+}
+```
+
+#### Web.config
+Wewnątrz <configuration> dołożyć znacznik:
+```config=
+<connectionStrings>
+    <add name="AppDbContext"
+	connectionString="Data Source=(LocalDB)\MSSQLLocalDB;
+	                AttachDbFilename=App_Data\CustomerDatabase.mdf;
+		        Integrated Security=True;
+			MultipleActiveResultSets=True;
+			Max Pool Size=100;"
+	providerName="System.Data.SqlClient" />
+</connectionStrings>
+```
+Czasami trzeba odświeżyć Server Explorer żeby zauważył bazę danych.
