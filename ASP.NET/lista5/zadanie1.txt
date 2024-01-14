@@ -1,0 +1,191 @@
+### Zadanie 1
+Zadanie z paskiem zadań (2.4) powtórzyć w MVC .NET Framework. Do utworzenia pól tekstowych dla poszczególnych zadań oraz do odebrania na serwerze danych od użytkownika wykorzystać wiązanie do tablicy. Zwrócić uwagę na prawidłową walidację danych.
+
+#### Controllers/StartController.cs
+```csharp=
+using System.Web.Mvc;
+using Zadanie1.Models;
+
+namespace Zadanie1.Controllers
+{
+    public class StartController : Controller
+    {
+        public ActionResult Index()
+        {
+            // potrzebne do wartosci domyslnych formularza
+            Deklaracja deklaracja = new Deklaracja();
+            return View( deklaracja );
+        }
+    }
+}
+```
+
+#### Controllers/PrintController.cs
+```csharp=
+using System;
+using System.Web.Mvc;
+using Zadanie1.Models;
+
+namespace Zadanie1.Controllers
+{
+    public class PrintController : Controller
+    {
+        public ActionResult Index(string Imie, string Nazwisko, DateTime Data, string Zajecia, int Zestaw, int[] Zadania)
+        {
+            Deklaracja deklaracja = new Deklaracja { 
+                Imie = Imie, 
+                Nazwisko = Nazwisko, 
+                Data = Data.Date.ToString("d"),
+                Zajecia = Zajecia,
+                Zestaw = Zestaw,
+                Zadania = Zadania 
+            }; // utworzenie obiektu Deklaracja i przypisanie mu wartosci podanych przez uzytkownika
+            return View(deklaracja); // zwrócenie widoku Print z modelem deklaracja
+        }
+    }
+}
+```
+
+#### Models/Deklaracja.cs
+```csharp=
+using System.ComponentModel.DataAnnotations;
+
+namespace Zadanie1.Models
+{
+    public class Deklaracja
+    {
+        [Required]
+        public string Imie { get; set; }
+        [Required]
+        public string Nazwisko { get; set; }
+        [Required]
+        public string Data { get; set; }
+        [Required]
+        public string Zajecia { get; set; }
+        [Required]
+        public int Zestaw { get; set; } = 1;
+        public int[] Zadania { get; set; } = new int[10];
+    }
+}
+```
+
+#### Views/Start/Index.cshtml
+```cshtml=
+@model Zadanie1.Models.Deklaracja
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@using (var form = Html.BeginForm("Index", "Print/Index"))
+{
+    <label>Deklaracja zadań:</label>
+    <br />
+    <label>Imię: </label>
+    @Html.TextBoxFor(model => model.Imie, new { required=true})
+    <br />
+    <label>Nazwisko: </label>
+    @Html.TextBoxFor(model => model.Nazwisko, new {required=true})
+    <br />
+    <label>Data: </label>
+    @Html.TextBoxFor(model => model.Data,
+        new { name= "Data", type = "date", @class = "input-date", required=true})
+    <br />
+    <label>Nazwa zajęć: </label>
+    @Html.TextBoxFor(model => model.Zajecia, new { required = true })
+    <br />
+    <label>Numer zestawu: </label>
+    @Html.TextBoxFor(model => model.Zestaw, htmlNumberAttributes("Zestaw", 1, 15, true))
+
+    <br /> <br />
+    <label> Wypełnij deklarację </label>
+    for (int i = 0; i < 10; i++)
+    {
+        <br />
+        <label> Zadanie @i </label>
+        @Html.TextBoxFor(model => model.Zadania[@i], htmlNumberAttributes("Zadanie[" + i + "]", 0, 2, false))
+    }
+    <input type="submit" value="Submit"/>
+}
+
+@{
+    // walidacja pol z numerami
+    object htmlNumberAttributes(string nameAttr, int min, int max, bool isRequired)
+    {
+        return new
+        {
+            name = nameAttr,
+            type = "number",
+            min = min.ToString(),
+            max = max.ToString(),
+            required = isRequired,
+            @class = "input-number",
+            oninput = "validate(this)"
+        };
+    }
+}
+
+<script>
+    function validate(input) {
+        // Sprawdź, czy wartość jest liczbą
+        var value = Number(input.value);
+        if (isNaN(value)) // nie
+            input.value = 0;
+        else // Jeśli tak, sprawdź, czy wartość jest w zakresie
+        {
+            var min = Number(input.min);
+            var max = Number(input.max);
+            if (value < min)
+                input.value = min;
+            else if (value > max)
+                input.value = max;
+        }
+    }
+</script>
+```
+
+#### Views/Print/Index.cshtml
+```cshtml=
+@model Zadanie1.Models.Deklaracja
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<form id="printForm" style="font-size: 24px">
+    <table cellspacing="5" border="1">
+        <tr> @*20*@
+            <td colspan="3">Przedmiot</td>
+            <td colspan="2">Zestaw</td>
+            <td colspan="4">Imię i nazwisko</td>
+            <td colspan="2">Suma</td>
+            <td colspan="2">Data</td>
+        </tr>
+        <tr>
+            <td colspan="3">@Model.Zajecia </td>
+            <td colspan="2">@Model.Zestaw </td>
+            <td colspan="4">@Model.Imie  @Model.Nazwisko</td>
+            <td colspan="2">@Model.Zadania.Sum() </td>
+            <td colspan="2">@Model.Data </td>
+        </tr>
+        <tr>
+            <td colspan="3">Zadania:</td>
+            @{
+                for (int i = 1; i <= Model.Zadania.Length; i++)
+                {
+                    <td>@i</td>
+                }
+            }
+        </tr>
+        <tr>
+            <td colspan="3">Punkty:</td>
+            @{
+                for (int i = 0; i < Model.Zadania.Length; i++)
+                {
+                    <td>@Model.Zadania[i]</td>
+                }
+            }
+        </tr>
+    </table>
+</form>
+```
