@@ -1,0 +1,3 @@
+to jest plik tekstowy
+to jest jego druga linijka
+a to jest jego ostatnia linijka
