@@ -1,0 +1,18 @@
+Wyjaśnić różnice między operatorami typeof i instanceof
+
+typeof _zmienna
+typeof zwraca typ zmiennej sposród:
+1) string
+2) number
+3) boolean
+4) object
+5) function
+6) null
+7) undefined
+
+(_object instanceof _Object_Type)
+instanceof zwraca true albo false, w zależności, czy dany obiekt jest obiektem podanego typu:
+(['1', '2'] instanceof Array) == true
+(['1', '2'] instanceof Object) == true
+(['1', '2'] instanceof String) == false
+(['1', '2'] instanceof Number) == false
