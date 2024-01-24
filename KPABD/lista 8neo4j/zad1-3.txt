@@ -1,0 +1,81 @@
+Zadanie 1. -----------------------------------------------------------------------------------------------------------------
+
+Należy pobrać bazę Movies:
+Na głupiego - Kopiujesz kod z https://github.com/neo4j-graph-examples/movies/blob/main/scripts/movies.cypher
+i wklejasz do https://workspace-preview.neo4j.io/workspace/query#
+Następnie aby zobaczyć wynik wpisujesz:
+
+MATCH (m: Movie) RETURN m
+
+Zadanie 2. (2 pkt) ---------------------------------------------------------------------------------------------------------
+
+• add 2 new actors and 2 new movies:
+CREATE (TheRock:Person {name:'Dwayne Johnson', born:1972})
+CREATE (JohnCena:Person {name:'John Cena', born:1977})
+
+CREATE (Bumblebee:Movie {title:'Bumblebee', released:2018, tagline:'People can be terrible about things they dont understand.'})
+CREATE (Jumanji:Movie {title:'Jumanji: Welcome to the Jungle', released:2017, tagline:'It is a lot easier to be brave when you have lives to spare. It is a lot harder when you only have one life.'})
+
+• add 2 new properties to 1 movie:
+MATCH (m:Movie { title: "Jumanji: Welcome to the Jungle"})
+SET m.director = "Jake Kasdan"
+RETURN m;
+
+MATCH (m:Movie { title: "Jumanji: Welcome to the Jungle"})
+SET m.genre = "Fantasy"
+RETURN m;
+
+• add 2 new acted in relations to the existing nodes:
+MATCH (p:Person), (m:Movie)
+WHERE p.name = 'Dwayne Johnson' AND m.title = 'Jumanji: Welcome to the Jungle'
+CREATE (p)-[r:ACTED_IN]->(m)
+RETURN r;
+
+MATCH (p:Person), (m:Movie)
+WHERE p.name = 'John Cena' AND m.title = 'Bumblebee'
+CREATE (p)-[r:ACTED_IN]->(m)
+RETURN r;
+
+• update 1 movie property:
+MATCH (m:Movie {title: "Jumanji: Welcome to the Jungle"})
+SET m.genre = 'Adventure'
+Return m;
+
+• remove 1 acted in relation:
+MATCH (p:Person {name: "John Cena"})-[r:ACTED_IN]-(:Movie {title: "Bumblebee"})
+DELETE r
+Return p;
+
+Zadanie 3. (2 pkt) ---------------------------------------------------------------------------------------------------------
+
+• return the movies where person A (Tom Hanks) acted in,
+MATCH (Person {name:'Tom Hanks'})-[ACTED_IN]->(m:Movie)
+RETURN m;
+
+• return the movies where person A (Tom Hanks) was both the actor and the director,
+MATCH (tom:Person {name:'Tom Hanks'})-[ACTED_IN]->(m:Movie),
+      (tom)-[DIRECTED]->(m)
+RETURN m;
+
+• return actors who didn’t play in any movie,
+MATCH (p:Person)-[:!ACTED_IN]->(Movie)
+RETURN p;
+
+• return actors who played in more than 2 movies,
+MATCH (p:Person)-[ACTED_IN]->(m:Movie)
+WITH p, count(m) AS number
+WHERE number > 2
+RETURN p;
+
+• return movies with the larger (???) number of actors. TF is "larger"? In first solution I assume any movie with 10 actors matches condition:
+MATCH (p:Person)-[ACTED_IN]->(m:Movie)
+WITH m, count(p) AS actors
+WHERE actors >= 10
+RETURN m;
+
+In second solution I assume the task was to find movie with the highest number of actors - I show both that movie and count:
+MATCH (p:Person)-[ACTED_IN]->(m:Movie)
+WITH m, count(p) AS actors
+RETURN m, actors
+ORDER BY actors DESC
+LIMIT 1;

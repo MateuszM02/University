@@ -1,0 +1,3 @@
+@echo off
+sqlcmd -S {nazwa_serwera} -d {nazwa_bazy_danych} -U {nazwa_użytkownika} -P {hasło} -N -i {nazwa_kwerendy}.sql
+pause
