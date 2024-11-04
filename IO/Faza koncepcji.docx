@@ -1,0 +1,57 @@
+System Zarządzania Zapasami Inteligentnymi
+Opis: 
+System zaprojektowany dla małych i średnich przedsiębiorstw, aby pomóc w bardziej efektywnym zarządzaniu zapasami. 
+System ten będzie zawierał funkcje do śledzenia poziomów zapasów, 
+monitorowania ruchu produktów, prognozowania popytu i automatyzacji 
+procesów uzupełniania zapasów.
+Nietrywialne funkcje:
+1.	Automatyczne Powiadomienia o Uzupełnianiu Zapasów:
+•	Opis: System automatycznie powiadamia użytkowników, 
+gdy poziomy zapasów spadają poniżej ustalonego progu.
+•	Dane wejściowe: Identyfikator produktu, obecny poziom 
+zapasów, próg uzupełniania.
+•	Tabele w bazie danych: Produkty, Magazyn, Powiadomienia, 
+Dostawcy.
+2.	Prognozowanie Popytu:
+•	Opis: Przewiduje przyszły popyt na produkty na podstawie 
+historycznych danych sprzedażowych i trendów sezonowych.
+•	Dane wejściowe: Identyfikator produktu, historyczne dane 
+sprzedażowe, trendy sezonowe.
+•	Tabele w bazie danych: Produkty, HistoriaSprzedaży, Prognozy,TrendySezonowe.
+3.	Zarządzanie Dostawcami:
+•	Opis: Zarządza informacjami o dostawcach i śledzi zamówienia składane u każdego dostawcy.
+•	Dane wejściowe: Identyfikator dostawcy, dane kontaktowe, 
+katalog produktów.
+•	Tabele w bazie danych: Dostawcy, Zamówienia, Produkty.
+
+
+
+4.	Śledzenie Zapasów w Czasie Rzeczywistym:
+•	Opis: Śledzi zmiany w zapasach w czasie rzeczywistym 
+i dostarcza szczegółowe raporty.
+•	Dane wejściowe: Identyfikator produktu, ilość przyjęta, 
+ilość wydana, znaczniki czasowe.
+•	Tabele w bazie danych: Magazyn, Produkty, Transakcje.
+Schemat relacyjnej bazy danych:
+•	Produkty: Przechowuje szczegóły dotyczące każdego produktu 
+(Identyfikator produktu, Nazwa, Opis, Cena, itp.).
+•	Magazyn: Śledzi bieżący poziom zapasów każdego produktu 
+(Identyfikator produktu, Poziom zapasów, Lokalizacja).
+•	HistoriaSprzedaży: Rejestruje dane dotyczące historycznej sprzedaży (Identyfikator transakcji, Identyfikator produktu, Ilość sprzedana, 
+Data sprzedaży).
+•	Dostawcy: Zawiera informacje o dostawcach 
+(Identyfikator dostawcy, Nazwa, Informacje kontaktowe, 
+Katalog produktów).
+•	Zamówienia: Loguje zamówienia składane u dostawców 
+(Identyfikator zamówienia, Identyfikator dostawcy, 
+Identyfikator produktu, Ilość zamówiona, Data zamówienia).
+•	Transakcje: Śledzi wszystkie ruchy magazynowe 
+(Identyfikator transakcji, Identyfikator produktu, Ilość, 
+Rodzaj transakcji, Znacznik czasowy).
+•	Prognozy: Przechowuje dane prognozowania popytu 
+(Identyfikator produktu, Data prognozy, Prognozowany popyt).
+•	TrendySezonowe: Zawiera dane dotyczące trendów sezonowych 
+wpływających na popyt (Identyfikator produktu, Opis trendu, 
+Data rozpoczęcia, Data zakończenia).
+•	Powiadomienia: Zarządza powiadomieniami o uzupełnianiu zapasów(Identyfikator powiadomienia, Identyfikator produktu, Próg, 
+Data powiadomienia).
