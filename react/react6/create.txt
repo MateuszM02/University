@@ -1,0 +1,10 @@
+> npm create vite@latest
+projectname
+react -> typescript
+> cd projectname
+> npm install
+> npm run dev
+
+material UI:
+> npm install @mui/material @emotion/react @emotion/styled
+> npm install @mui/icons-material - ikony

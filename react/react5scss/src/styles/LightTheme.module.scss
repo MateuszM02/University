@@ -1,0 +1,73 @@
+@use "./colors.module.scss" as colors;
+
+.lightTheme {
+    background-color: colors.$lightThemeBg;
+    color: colors.$lightTextColor;
+  
+    .navbar {
+      background-color: colors.$lightThemeContentCardBg;
+  
+      a {
+        color: colors.$lightTextColor;
+      }
+    }
+  
+    .themeToggleButton {
+      background-color: colors.$lightTextColor;
+      color: colors.$lightThemeBg;
+  
+      &:hover {
+        background-color: #555;
+      }
+    }
+  
+    .contentCard {
+      background-color: colors.$lightThemeContentCardBg;
+    }
+  
+    .teamMember {
+      background-color: #f5f5f5;
+      color: colors.$lightTextColor;
+    }
+  
+    .blogPost {
+      background-color: #f0f0f0;
+      color: colors.$lightTextColor;
+  
+      button {
+        background-color: colors.$lightThemeButtonBg;
+        color: colors.$lightThemeBg;
+  
+        &:hover {
+          background-color: colors.$lightThemeButtonHoverBg;
+        }
+      }
+    }
+  
+    .section:nth-child(even) {
+      background-color: #f5f5f5;
+    }
+  
+    .contactForm {
+      background-color: #f9f9f9;
+      color: colors.$lightTextColor;
+      border: 1px solid colors.$lightThemeBorderColor;
+  
+      input[type="text"],
+      input[type="email"],
+      textarea {
+        background-color: colors.$lightThemeBg;
+        color: colors.$lightTextColor;
+        border: 1px solid #ccc;
+      }
+  
+      button {
+        background-color: colors.$lightThemeButtonBg;
+        color: colors.$lightThemeBg;
+  
+        &:hover {
+          background-color: colors.$lightThemeButtonHoverBg;
+        }
+      }
+    }
+  }

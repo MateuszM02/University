@@ -1,0 +1,73 @@
+@use "./colors.module.scss" as colors;
+
+.darkTheme {
+    background-color: colors.$darkThemeBg;
+    color: colors.$darkTextColor;
+  
+    .navbar {
+      background-color: #fff;
+  
+      a {
+        color: colors.$darkTextColor;
+      }
+    }
+  
+    .themeToggleButton {
+      background-color: #ddd;
+      color: #333;
+  
+      &:hover {
+        background-color: #ccc;
+      }
+    }
+  
+    .contentCard {
+      background-color: colors.$darkThemeContentCardBg;
+    }
+  
+    .teamMember {
+      background-color: #444;
+      color: colors.$darkTextColor;
+    }
+  
+    .blogPost {
+      background-color: #222;
+      color: colors.$darkTextColor;
+  
+      button {
+        background-color: colors.$darkThemeButtonBg;
+        color: colors.$darkTextColor;
+  
+        &:hover {
+          background-color: colors.$darkThemeButtonHoverBg;
+        }
+      }
+    }
+  
+    .section:nth-child(even) {
+      background-color: #444;
+    }
+  
+    .contactForm {
+      background-color: #333;
+      color: colors.$darkTextColor;
+      border: 1px solid #555;
+  
+      input[type="text"],
+      input[type="email"],
+      textarea {
+        background-color: #444;
+        color: colors.$darkTextColor;
+        border: 1px solid #666;
+      }
+  
+      button {
+        background-color: colors.$darkThemeButtonBg;
+        color: colors.$darkTextColor;
+  
+        &:hover {
+          background-color: colors.$darkThemeButtonHoverBg;
+        }
+      }
+    }
+  }

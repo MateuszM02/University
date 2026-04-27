@@ -1,0 +1,34 @@
+@use "./colors.module.scss" as colors;
+
+body {
+    font-family: colors.$fontStack;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .portfolio {
+    margin: 0 auto;
+  }
+  
+  .contentCard {
+    border-radius: 10px;
+    margin: 20px 0;
+  }
+  
+  .services {
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+  
+    li {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+  
+    h3 {
+      font-size: 1.8em;
+      margin-bottom: 10px;
+    }
+  }
