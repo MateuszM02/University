@@ -1,0 +1,79 @@
+body {
+  font-family: sans-serif;
+  font-size: 24px;
+  text-align: center;
+  background-color: rgb(135, 102, 216);
+  color: white;
+  display: grid;
+  justify-content: center;
+}
+
+.App {
+  background-color: rgb(50, 7, 192);
+  border-radius: 10px;
+  padding: 50px;
+  padding-top: 0px;
+  width: fit-content;
+  display: grid;
+  justify-content: center;
+}
+
+.TodoForm {
+  margin-bottom: 10px;
+}
+
+.filter-div {
+  display: flex;
+  align-items: center;
+  margin: 5px;
+}
+
+.TodoList {
+}
+
+.Todo {
+  margin: 10px;
+  border-radius: 10px;
+  background-color: rgb(135, 102, 216);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  label {
+    font-size: 48px;
+  }
+
+  input {
+    cursor: pointer;
+    width: 25px;
+    height: 25px;
+  }
+}
+
+.icon {
+  cursor: pointer;
+  margin-left: 10px;
+  margin-right: 10px;
+  width: 25px;
+  height: 25px;
+  max-width: 50px;
+  max-height: 50px;
+}
+
+.iconTrash {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.text-input {
+  font-size: 24px;
+  background-color: transparent;
+  border-color: rgb(135, 102, 216);
+}
+
+.button {
+  cursor: pointer;
+  background-color: rgb(135, 102, 216);
+  color: white;
+  font-size: 24px;
+}

@@ -1,0 +1,122 @@
+body {
+    font-family: sans-serif;
+    font-size: 24px;
+    text-align: center;
+    background-color: rgb(135, 102, 216);
+    color: white;
+    display: grid;
+    justify-content: center;
+  }
+  
+  .App {
+    background-color: rgb(50, 7, 192);
+    border-radius: 10px;
+    padding: 50px;
+    padding-top: 0px;
+    display: grid;
+    justify-content: center;
+  }
+  
+  .RecipeForm {
+    margin-bottom: 10px;
+  }
+  
+  .filter-div {
+    display: flex;
+    align-items: center;
+    margin: 5px;
+  }
+  
+  .Recipe {
+    margin: 10px;
+    border-radius: 10px;
+    background-color: rgb(135, 102, 216);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+  
+    label {
+      cursor: pointer;
+      font-size: 48px;
+    }
+  
+    input {
+      cursor: pointer;
+      width: 25px;
+      height: 25px;
+    }
+  }
+
+  .centered-label {
+    text-align: center;
+  }
+  
+  .icon {
+    cursor: pointer;
+    margin-left: 10px;
+    margin-right: 10px;
+    width: 25px;
+    height: 25px;
+    max-width: 50px;
+    max-height: 50px;
+  }
+  
+  .iconTrash {
+    display: flex;
+    justify-content: flex-end;
+  }
+  
+  .text-input {
+    font-size: 24px;
+    background-color: transparent;
+    border-color: rgb(135, 102, 216);
+  }
+  
+  .button {
+    cursor: pointer;
+    background-color: rgb(135, 102, 216);
+    color: white;
+    font-size: 24px;
+  }
+  
+  /* style dla stronnicowania ---------------------------------------------- */
+  
+  /* Styl podstawowy dla paginatora */
+  .pagination {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    justify-content: center; /* Wyśrodkowanie paginatora */
+    margin-top: 20px; /* Odstęp od górnej zawartości */
+  }
+  
+  /* Styl dla poszczególnych elementów (stron) */
+  .pagination li {
+    display: inline-block; /* Zmiana na inline-block aby elementy były obok siebie */
+    margin: 0 5px; /* Odstępy między elementami */
+  }
+  
+  /* Styl dla linków */
+  .pagination a {
+    color: white; /* Kolor tekstu */
+    text-decoration: none; /* Usunięcie podkreślenia */
+    padding: 5px 10px; /* Padding dla lepszego wyglądu */
+    border: 1px solid #ddd; /* Ramka dookoła */
+    border-radius: 5px; /* Zaokrąglenie rogów ramki */
+    transition: background-color 0.3s; /* Animacja zmiany koloru tła */
+    background-color: rgb(135, 102, 216);
+  }
+  
+  /* Styl dla aktywnego linku (aktualnej strony) */
+  .pagination li.active a {
+    background-color: #0275d8; /* Kolor tła dla aktywnego elementu */
+    color: white; /* Kolor tekstu dla aktywnego elementu */
+  }
+  
+  /* Styl dla linków przy najechaniu kursorem */
+  .pagination a:hover {
+    background-color: #0056b3; /* Ciemniejszy kolor tła przy hover */
+    color: white; /* Kolor tekstu przy hover */
+  }
+  
