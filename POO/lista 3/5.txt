@@ -1,0 +1,15 @@
+MouseListener z podstawowej biblioteki java.awt.event
+Wymusza on nadpisanie następujących metod:
+
+1. public void mouseClicked(MouseEvent e); // początek i zakończenie naciskania komponentu
+2. public void mousePressed(MouseEvent e); // początek naciskania komponentu
+3. public void mouseReleased(MouseEvent e); // koniec naciskania komponentu
+4. public void mouseEntered(MouseEvent e); // najechanie myszką na komponent
+5. public void mouseExited(MouseEvent e); // zjechanie myszką z komponentu
+
+Często korzysta się tylko z pierwszej metody, ewentualnie 
+dodatkowo z 2 ostatnimi dla poprawy wrażeń graficznych. 
+Zwłaszcza rzadko kiedy jest konieczność rozróżnienia 
+kliknięcia z opuszczeniem od kliknięcia bez opuszczenia.
+
+Rozwiązanie - rozbić na kilka interfejsów.

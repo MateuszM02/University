@@ -1,0 +1,12 @@
+SRP - Klasa ma tylko jedną odpowiedzialność, czyli jeden powód do zmiany.
+Przykład: Klasa User powinna zarządzać tylko danymi użytkownika, 
+a nie logiką autoryzacji czy zapisywaniem do bazy danych.
+
+ISP - Klient nie powinien być zmuszany do zależności od metod, których nie używa.
+Przykład: Jeśli mamy interfejs Worker z metodami Work i Eat, 
+a klasa Robot implementuje ten interfejs, nie powinna być zmuszona 
+do implementacji metody Eat, której nie używa.
+
+SRP ma ułatwiać twórcy klasy zmiany w niej np. w przypadku zmian w klasach pokrewnych,
+ISP ma ułatwiać zachowanie czytelnego kodu w klasie pokrewnej poprzez 
+brak konieczności implementowania metod pustych.

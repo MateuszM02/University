@@ -1,0 +1,50 @@
+class Student
+{
+	int index;
+	List<Course> courses;
+	List<Course> getCourses()
+	{
+		return courses;
+	}
+}
+		
+class UsosWebPage
+{
+	void show()
+	{
+		pageLayout = GradeController.getStudentGradeInfo();
+	}
+}
+		
+class GradeController:
+{
+	Student student;
+	
+	List<int> getStudentGradeInfo()
+	{
+		List<int> grades = new();
+		int i = 0;
+		courses = student.getCourses()
+		for (Course c : courses)
+		{
+			grades[i++] = c.getMark(student);
+		}
+		return grades;
+	}
+}
+	
+class Course
+{
+	List<int> course_mark;
+	Student student;
+	
+	int getMark(Student s)
+	{
+		student = s;
+		return getValue();
+	}
+	int getValue()
+	{
+		return course_mark[student.index];
+	}
+}
