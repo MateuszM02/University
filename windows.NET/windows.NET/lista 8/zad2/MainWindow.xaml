@@ -1,0 +1,45 @@
+﻿<Window x:Class="zad2.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Kółko i krzyżyk" Height="475" Width="450">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="Black"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Margin" Value="5"/>
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" SharedSizeGroup="row"/>
+            <RowDefinition Height="*" SharedSizeGroup="row"/>
+            <RowDefinition Height="*" SharedSizeGroup="row"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" SharedSizeGroup="col"/>
+            <ColumnDefinition Width="*" SharedSizeGroup="col"/>
+            <ColumnDefinition Width="*" SharedSizeGroup="col"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Przyciski do gry -->
+        <Button x:Name="b00" Grid.Row="0" Grid.Column="0" Click="Button_Click" />
+        <Button x:Name="b01" Grid.Row="0" Grid.Column="1" Click="Button_Click" />
+        <Button x:Name="b02" Grid.Row="0" Grid.Column="2" Click="Button_Click" />
+        <Button x:Name="b10" Grid.Row="1" Grid.Column="0" Click="Button_Click" />
+        <Button x:Name="b11" Grid.Row="1" Grid.Column="1" Click="Button_Click" />
+        <Button x:Name="b12" Grid.Row="1" Grid.Column="2" Click="Button_Click" />
+        <Button x:Name="b20" Grid.Row="2" Grid.Column="0" Click="Button_Click" />
+        <Button x:Name="b21" Grid.Row="2" Grid.Column="1" Click="Button_Click" />
+        <Button x:Name="b22" Grid.Row="2" Grid.Column="2" Click="Button_Click" />
+
+        <!-- Komponent do wyświetlania informacji o grze -->
+        <TextBlock x:Name="whoseMoveTxtblock" Grid.Row="3" Grid.ColumnSpan="3" 
+                   Text="Tura gracza: X" Height="25"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </Grid>
+</Window>

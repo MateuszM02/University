@@ -1,0 +1,50 @@
+﻿<Window x:Class="lista_8.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Wybór uczelni" Height="420" Width="600" FontSize="24"
+        Background="#EFEBDF">
+
+    <WrapPanel Orientation="Vertical">
+        <GroupBox Header="Uczelnia" Margin="10">
+            <WrapPanel Orientation="Vertical" Margin="5">
+                <DockPanel Margin="5">
+                    <Label Content="Nazwa:" />
+                    <TextBox x:Name="NazwaTxtbox" Width="440" 
+                             HorizontalAlignment="Right"/>
+                </DockPanel>
+                <DockPanel Margin="5">
+                    <Label Content="Adres:" />
+                    <TextBox x:Name="AdresTxtbox" Width="440"  
+                             HorizontalAlignment="Right" />
+                </DockPanel>
+            </WrapPanel>
+        </GroupBox>
+        <GroupBox Header="Rodzaj studiów" Margin="10">
+            <WrapPanel Orientation="Vertical">
+                <WrapPanel Orientation="Horizontal">
+                    <Label Content="Cykl nauki:"/>
+                    <ComboBox x:Name="CyklCmbox" SelectedIndex="0" Background="#EFEBDF">
+                        <ComboBoxItem>3-letnie</ComboBoxItem>
+                        <ComboBoxItem>3,5-letnie</ComboBoxItem>
+                    </ComboBox>
+                </WrapPanel>
+                <WrapPanel Orientation="Horizontal">
+                    <CheckBox x:Name="DzienneChbox" Content="dzienne" IsChecked="True" 
+                              Checked="DzienneChbox_Checked"
+                              Unchecked="DzienneChbox_Checked"/>
+                    <CheckBox x:Name="UzupChbox" Content="uzupełniające" IsChecked="False"
+                              Checked="UzupChbox_Checked"
+                              Unchecked="UzupChbox_Checked"/>
+                </WrapPanel>
+            </WrapPanel>
+        </GroupBox>
+        <DockPanel LastChildFill="True" Margin="10">
+            <Button x:Name="AkceptujBtn" Content="Akceptuj" Click="AkceptujBtn_Click"/>
+            <Button x:Name="AnulujBtn" Content="Anuluj" Click="AnulujBtn_Click"
+                    HorizontalAlignment="Right"/>
+        </DockPanel>
+    </WrapPanel>
+</Window>
